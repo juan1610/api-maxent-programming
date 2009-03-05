@@ -23,17 +23,22 @@ import org.junit.Test;
 import edu.berkeley.mvz.amp.MaxEntConfig.Builder;
 import edu.berkeley.mvz.amp.MaxEntConfig.CommandLineOption;
 
-public class MaxEntConfigTest {
+/**
+ * Unit tests for {@link MaxEntConfig}.
+ * 
+ */
+public class MaxEntConfigTests {
 
-  private static Logger log = Logger.getLogger(MaxEntConfigTest.class);
+  private static Logger log = Logger.getLogger(MaxEntConfigTests.class);
 
   @Test
-  public void addOptions() {
+  public void addOption() {
     Builder b = new Builder(".");
-    b.addOption(CommandLineOption.RANDOM_SEED, "20");
-    b.addOption(CommandLineOption.JACK_KNIFE);
+    b.addOption(CommandLineOption.RANDOMSEED, "20");
+    b.addOption(CommandLineOption.JACKKNIFE);
+    Assert.assertEquals(b.getOptions().get(CommandLineOption.RANDOMSEED), "20");
     Assert
-        .assertEquals(b.getOptions().get(CommandLineOption.RANDOM_SEED), "20");
+        .assertEquals(b.getOptions().get(CommandLineOption.JACKKNIFE), "true");
     log.info(b.toString());
 
     b = new Builder(".");
@@ -62,7 +67,7 @@ public class MaxEntConfigTest {
 
     b = new Builder(".");
     try {
-      b.addOption(CommandLineOption.JACK_KNIFE, null);
+      b.addOption(CommandLineOption.JACKKNIFE, null);
       Assert.fail();
     } catch (IllegalArgumentException e) {
       log.info(e);
