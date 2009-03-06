@@ -1,7 +1,8 @@
-#summary Quick usage examples for amp-beta-0.0.1
+#summary Quick usage examples
 #labels Phase-Support,Featured
 
-= Samples With Data (SWD) =
+=  amp-beta-0.0.1 =
+== Samples With Data (SWD) ==
 Getting samples with data is fairly easy. Once you create your samples and layers, use `MaxEntService` and invoke the `swd` method:
 
 {{{
