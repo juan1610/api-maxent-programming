@@ -1,0 +1,26 @@
+#summary Quick usage examples for amp-beta-0.0.1
+#labels Phase-Support
+
+= Samples With Data (SWD) =
+Getting samples with data is fairly easy. Once you create your samples and layers, use `MaxEntService` and invoke the `swd` method:
+
+{{{
+// Create a list of layers and samples:
+List<Layer> layers = new ArrayList<Layer>();
+layers.add(Layer.newInstance(CLIMATE, "foo", 2006, "/path/to/foo.asc"));
+layers.add(Layer.newInstance(FOREST, "bar", 1977, "/path/to/bar.asc"));
+List<Sample> samples = Sample.fromCsv("/path/to/samples.csv");
+
+// Get your samples with data:
+SamplesWithData swd = MaxEntService.swd(samples, layers);
+
+// Iterate over the results:
+for (Sample s : samples()) {
+  for (Layer l : layers()) {
+    System.out.format("%s, %s, %f", l.getName(), s.getPoint(), swd.getData(s, l)));
+  }
+}
+
+// Write them to a file:
+SamplesWithData.toCsv("/path/to/swd.csv");
+}}}
