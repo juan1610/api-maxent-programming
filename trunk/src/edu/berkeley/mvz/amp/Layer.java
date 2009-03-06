@@ -64,7 +64,7 @@ public class Layer {
   private static class Parser {
 
     private static enum State {
-      HEADER_KEY, HEADER_VAL, DATA_INIT, DATA_VAL
+      HEADER_KEY, HEADER_VAL, DATA_INIT, DATA_VAL, DONE
     }
 
     static AsciiHeader parse(String filePath) throws IOException {
@@ -75,8 +75,9 @@ public class Layer {
       st.parseNumbers();
       st.wordChars('_', '_');
       String headerKey = "";
+      int headerCount = 0;
       int tokenType = st.nextToken();
-      while (tokenType != StreamTokenizer.TT_EOF) {
+      while (tokenType != StreamTokenizer.TT_EOF && parserState != State.DONE) {
         if (tokenType == StreamTokenizer.TT_EOL) {
           continue;
         }
@@ -106,7 +107,12 @@ public class Layer {
           else if (headerKey.equals("NODATA_value"))
             header.noDataValue = (int) tokenNumber;
           tokenType = st.nextToken();
-          parserState = State.HEADER_KEY;
+          if (++headerCount == 6) {
+            parserState = State.DONE;
+          } else {
+
+            parserState = State.HEADER_KEY;
+          }
           break;
         }
       }
@@ -381,10 +387,6 @@ public class Layer {
 
   @Override
   public String toString() {
-    return String
-        .format(
-            "Extent=NW:%s,NE:%s,SE:%s,SW:%s Resolution=%f NoData=%d Rows=%d Columns=%d",
-            extent.nw, extent.ne, extent.se, extent.sw, res, noData, nRows,
-            nCols);
+    return path;
   }
 }

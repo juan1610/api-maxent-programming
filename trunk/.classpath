@@ -6,5 +6,6 @@
 	<classpathentry kind="lib" path="tools/lib/junit/junit-4.5.jar"/>
 	<classpathentry kind="lib" path="tools/lib/log4j/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="tools/lib/maxent/maxent.jar"/>
+	<classpathentry kind="lib" path="tools/lib/opencsv/opencsv-1.8.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
