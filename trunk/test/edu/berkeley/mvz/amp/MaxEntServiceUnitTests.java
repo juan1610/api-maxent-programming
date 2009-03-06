@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
-
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
@@ -48,15 +46,13 @@ public class MaxEntServiceUnitTests {
       layers.add(Layer.newInstance(CLIMATE, "foo", 0, path("cld6190_ann.asc")));
       layers.add(Layer.newInstance(CLIMATE, "bar", 0, path("h_dem.asc")));
 
-      try {
-        MaxEntService.swd(samples, layers);
-        Assert.fail();
-      } catch (Exception e) {
-        log.info(e);
-      }
-
-      MaxEntService.initService(OUTPUT_PATH, layers);
       SamplesWithData swd = MaxEntService.swd(samples, layers);
+      for (Sample s : swd.getSamples()) {
+        for (Layer l : swd.getLayers()) {
+          log.info(String.format("%s, %s, %f", l.getName(), s.getPoint(), swd
+              .getData(s, l)));
+        }
+      }
       log.info(swd);
     } catch (IOException e) {
       e.printStackTrace();

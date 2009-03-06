@@ -41,9 +41,8 @@ public enum MaxEntService {
   INSTANCE;
 
   private static Logger log = Logger.getLogger(MaxEntService.class);
-  private static String workspace;
-  private static List<Layer> layers;
-  private static Map<String, Layer> layerMap;
+  private static List<Layer> layers = new ArrayList<Layer>();
+  private static Map<String, Layer> layerMap = new HashMap<String, Layer>();
 
   public static void fit(Config config, SamplesWithData swd) {
     // TODO(eighty)
@@ -67,30 +66,6 @@ public enum MaxEntService {
   }
 
   /**
-   * Initializes the service by registering a workspace directory and a list of
-   * layers. Must be called before invoking any service methods. Failure to do
-   * so results in an {@link IllegalStateException}.
-   * 
-   * @param workspacePath path to save MaxEnt files to
-   * @param layerList list of layers to register.
-   */
-  public static void initService(String workspacePath, List<Layer> layerList) {
-    File f = new File(workspacePath);
-    if (!f.exists() || !f.canWrite() || !f.isDirectory()) {
-      throw new IllegalArgumentException("Bad workspace directory: " + f);
-    }
-    workspace = workspacePath;
-    if (layerList == null) {
-      throw new IllegalArgumentException("Layer directories were null");
-    }
-    layers = new ArrayList<Layer>(layerList);
-    layerMap = new HashMap<String, Layer>();
-    for (Layer l : layers) {
-      layerMap.put(new File(l.getPath()).getName(), l);
-    }
-  }
-
-  /**
    * Returns samples with data given a list of samples and layers.
    * 
    * @param samples list of samples
@@ -98,24 +73,26 @@ public enum MaxEntService {
    * @return samples with data
    */
   public static SamplesWithData swd(List<Sample> samples, List<Layer> layers) {
-    checkServiceState();
+    MaxEntService.layers.addAll(layers);
+    for (Layer l : layers) {
+      layerMap.put(new File(l.getPath()).getName(), l);
+    }
+
     SamplesWithData swd = null;
     SwdBuilder sb = new SwdBuilder();
     try {
-      File outdir = new File(workspace);
-
       // Writes samples to file:
-      File sout = File.createTempFile("samples", ".csv", outdir);
+      File sout = File.createTempFile("samples", ".csv");
       Sample.toCsv(sout.getPath(), samples);
 
       // Configures SWD run:
-      ConfigBuilder cb = new ConfigBuilder(outdir.getPath());
+      ConfigBuilder cb = new ConfigBuilder();
       cb.addOption(Option.SAMPLESFILE, sout.getPath());
       cb.addLayers(layers);
       String[] argv = samplesWithDataArgv(cb);
 
       // Redirects standard output to SWD file:
-      File swdout = File.createTempFile("swd", ".csv", outdir);
+      File swdout = File.createTempFile("swd", ".csv");
       FileOutputStream fos = new FileOutputStream(swdout);
       PrintStream ps = new PrintStream(fos);
       System.setOut(ps);
@@ -129,12 +106,6 @@ public enum MaxEntService {
       swd = sb.build();
     }
     return swd;
-  }
-
-  private static void checkServiceState() {
-    if (workspace == null) {
-      throw new IllegalStateException("Service not initialized!");
-    }
   }
 
   private static String[] samplesWithDataArgv(ConfigBuilder cb) {
