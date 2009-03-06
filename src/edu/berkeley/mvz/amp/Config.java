@@ -41,6 +41,10 @@ public class Config {
     private final List<Layer> layers = new ArrayList<Layer>();
     private final List<Sample> samples = new ArrayList<Sample>();
 
+    public ConfigBuilder() {
+      // TODO Auto-generated constructor stub
+    }
+
     /**
      * Constructs a config builder from a list of samples and a list of layers.
      * 

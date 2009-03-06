@@ -166,7 +166,7 @@ public class SamplesWithData {
    * @param Layer the layer
    * @return layer value associated with sample
    */
-  public double getSampleData(Sample sample, Layer Layer) {
+  public double getData(Sample sample, Layer Layer) {
     return sampleData.get(sample).getGridValue(Layer);
   }
 
