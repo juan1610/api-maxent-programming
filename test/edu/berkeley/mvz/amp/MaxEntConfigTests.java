@@ -15,16 +15,20 @@
  */
 package edu.berkeley.mvz.amp;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-import edu.berkeley.mvz.amp.MaxEntConfig.Builder;
-import edu.berkeley.mvz.amp.MaxEntConfig.CommandLineOption;
+import edu.berkeley.mvz.amp.Layer.LayerType;
+import edu.berkeley.mvz.amp.Config.ConfigBuilder;
+import edu.berkeley.mvz.amp.Config.Option;
 
 /**
- * Unit tests for {@link MaxEntConfig}.
+ * Unit tests for {@link Config}.
  * 
  */
 public class MaxEntConfigTests {
@@ -33,15 +37,14 @@ public class MaxEntConfigTests {
 
   @Test
   public void addOption() {
-    Builder b = new Builder(".");
-    b.addOption(CommandLineOption.RANDOMSEED, "20");
-    b.addOption(CommandLineOption.JACKKNIFE);
-    Assert.assertEquals(b.getOptions().get(CommandLineOption.RANDOMSEED), "20");
-    Assert
-        .assertEquals(b.getOptions().get(CommandLineOption.JACKKNIFE), "true");
+    ConfigBuilder b = new ConfigBuilder(".");
+    b.addOption(Option.RANDOMSEED, "20");
+    b.addOption(Option.JACKKNIFE);
+    Assert.assertEquals(b.getOptions().get(Option.RANDOMSEED), "20");
+    Assert.assertEquals(b.getOptions().get(Option.JACKKNIFE), "true");
     log.info(b.toString());
 
-    b = new Builder(".");
+    b = new ConfigBuilder(".");
     try {
       b.addOption(null);
       Assert.fail();
@@ -49,7 +52,7 @@ public class MaxEntConfigTests {
       log.info(e);
     }
 
-    b = new Builder(".");
+    b = new ConfigBuilder(".");
     try {
       b.addOption(null, "");
       Assert.fail();
@@ -57,7 +60,7 @@ public class MaxEntConfigTests {
       log.info(e);
     }
 
-    b = new Builder(".");
+    b = new ConfigBuilder(".");
     try {
       b.addOption(null, null);
       Assert.fail();
@@ -65,25 +68,47 @@ public class MaxEntConfigTests {
       log.info(e);
     }
 
-    b = new Builder(".");
+    b = new ConfigBuilder(".");
     try {
-      b.addOption(CommandLineOption.JACKKNIFE, null);
+      b.addOption(Option.JACKKNIFE, null);
       Assert.fail();
     } catch (IllegalArgumentException e) {
       log.info(e);
     }
   }
+  @Test
+  public void asArgv() {
+    ConfigBuilder b = new ConfigBuilder("/Users/eighty");
+    b.addOption(Option.JACKKNIFE);
+    b.addOption(Option.SAMPLESFILE, "/samples/file.csv");
+    String path = LayerUnitTests.class.getResource("valid-header.asc")
+        .getPath();
+    List<Layer> layers = new ArrayList<Layer>();
+    layers.add(Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path));
+    b.addLayers(layers);
+    String[] argv = Config.asArgv(b);
+    StringBuilder sb = new StringBuilder();
+    for (String s : argv) {
+      sb.append(String.format("%s ", s));
+    }
+    String commandLine = sb.toString().trim();
+    log.info(commandLine);
+    Assert
+        .assertEquals(
+            "-J outputdirectory=/Users/eighty samplesfile=/samples/file.csv /Users/eighty/Projects/Workspace/AMP/bin/edu/berkeley/mvz/amp/valid-header.asc",
+            commandLine);
+  }
 
   @Test
   public void builderConstructor() {
-    Builder b;
+    ConfigBuilder b;
     try {
-      b = new Builder("BOGUS PATH");
+      b = new ConfigBuilder("BOGUS PATH");
       Assert.fail();
     } catch (IllegalArgumentException e) {
     }
 
-    b = new Builder(".");
+    b = new ConfigBuilder(".");
     Assert.assertNotNull(b);
   }
 }
