@@ -31,9 +31,9 @@ import edu.berkeley.mvz.amp.Config.Option;
  * Unit tests for {@link Config}.
  * 
  */
-public class MaxEntConfigTests {
+public class MaxEntConfigTest {
 
-  private static Logger log = Logger.getLogger(MaxEntConfigTests.class);
+  private static Logger log = Logger.getLogger(MaxEntConfigTest.class);
 
   @Test
   public void addOption() {
@@ -81,7 +81,7 @@ public class MaxEntConfigTests {
     ConfigBuilder b = new ConfigBuilder("/Users/eighty");
     b.addOption(Option.JACKKNIFE);
     b.addOption(Option.SAMPLESFILE, "/samples/file.csv");
-    String path = LayerUnitTests.class.getResource("valid-header.asc")
+    String path = LayerTest.class.getResource("valid-header.asc")
         .getPath();
     List<Layer> layers = new ArrayList<Layer>();
     layers.add(Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path));

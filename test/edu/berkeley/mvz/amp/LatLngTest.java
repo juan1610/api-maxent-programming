@@ -26,7 +26,7 @@ import org.junit.Test;
  * Unit tests for {@link LatLng}.
  * 
  */
-public class LatLngUnitTests {
+public class LatLngTest {
 
   private static boolean throwsException(double lat, double lng) {
     try {

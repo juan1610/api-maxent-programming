@@ -15,11 +15,10 @@
  */
 package edu.berkeley.mvz.amp;
 
-import static edu.berkeley.mvz.amp.Layer.LayerType.CLIMATE;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+
+import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
@@ -28,32 +27,30 @@ import org.junit.Test;
  * Unit tests for {@link MaxEntService}.
  * 
  */
-public class MaxEntServiceUnitTests {
+public class MaxEntServiceTest {
 
-  private static String OUTPUT_PATH = "/Users/eighty/";
+  private static Logger log = Logger.getLogger(MaxEntServiceTest.class);
 
-  private static Logger log = Logger.getLogger(MaxEntServiceUnitTests.class);
-
-  private static String path(String name) {
-    return MaxEntServiceUnitTests.class.getResource(name).getPath();
+  static {
+    log.info(String.format("%s starting", MaxEntServiceTest.class.getName()));
   }
 
   @Test
-  public void samplesWithData() {
-    try {
-      List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
-      List<Layer> layers = new ArrayList<Layer>();
-      layers.add(Layer.newInstance(CLIMATE, "foo", 0, path("cld6190_ann.asc")));
-      layers.add(Layer.newInstance(CLIMATE, "bar", 0, path("h_dem.asc")));
+  public void backgroundSwd() throws IOException {
+    List<Layer> layers = LayerTest.getTestLayers();
+    int n = 10000;
+    SamplesWithData bswd = MaxEntService.backgroundSwd(n, layers);
+    Assert.assertEquals(n, bswd.size());
+  }
 
+  @Test
+  public void swd() {
+    try {
+      List<Sample> samples = SampleTest.getTestSamples();
+      List<Layer> layers = LayerTest.getTestLayers();
       SamplesWithData swd = MaxEntService.swd(samples, layers);
-      for (Sample s : swd.getSamples()) {
-        for (Layer l : swd.getLayers()) {
-          log.info(String.format("%s, %s, %f", l.getName(), s.getPoint(), swd
-              .getData(s, l)));
-        }
-      }
-      log.info(swd);
+      Assert.assertNotNull(swd);
+      Assert.assertTrue(swd.size() > 0 && swd.size() <= samples.size());
     } catch (IOException e) {
       e.printStackTrace();
     }

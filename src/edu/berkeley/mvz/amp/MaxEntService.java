@@ -18,7 +18,6 @@ package edu.berkeley.mvz.amp;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +25,14 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import density.Getval;
+import density.tools.RandomSample;
 import edu.berkeley.mvz.amp.Config.ConfigBuilder;
 import edu.berkeley.mvz.amp.Config.Option;
+import edu.berkeley.mvz.amp.Layer.LayerProvider;
 import edu.berkeley.mvz.amp.SamplesWithData.SwdBuilder;
 
 /**
- * This singleton class is used to access MaxEnt as a service. Clients must
- * invoke the <code>initService</code> method before invoking any service
- * methods. Doing so results in an {@link IllegalStateException}.
+ * This singleton class can be used to access MaxEnt as a service.
  * 
  */
 public enum MaxEntService {
@@ -41,21 +40,46 @@ public enum MaxEntService {
   INSTANCE;
 
   private static Logger log = Logger.getLogger(MaxEntService.class);
-  private static List<Layer> layers = new ArrayList<Layer>();
-  private static Map<String, Layer> layerMap = new HashMap<String, Layer>();
 
+  public static SamplesWithData backgroundSwd(int n, List<Layer> layers) {
+    long start = System.currentTimeMillis();
+    SamplesWithData swd = null;
+    try {
+      // Configures background SWD run:
+      ConfigBuilder cb = new ConfigBuilder();
+      cb.addLayers(layers);
+      String[] argv = backgroundSwdArgv(cb, n);
+
+      // Redirects standard output to SWD file:
+      File swdout = File.createTempFile("background-swd", ".csv");
+      FileOutputStream fos = new FileOutputStream(swdout);
+      PrintStream ps = new PrintStream(fos);
+      System.setOut(ps);
+
+      // Dispatches to MaxEnt to get SWD:
+      RandomSample.main(argv);
+      System.setOut(System.out);
+
+      // Loads data from background SWD file that MaxEnt just created:
+      final Map<String, Layer> layerNames = new HashMap<String, Layer>();
+      for (Layer l : layers) {
+        layerNames.put(l.getFilename(), l);
+      }
+      swd = SamplesWithData.fromCsv(swdout.getPath(), new LayerProvider() {
+        public Layer getLayerByFilename(String filename) {
+          return layerNames.get(filename);
+        }
+      });
+    } catch (Exception e) {
+      log.error(e);
+    }
+    log.info(String.format(
+        "MaxEntService.backgroundSwd runtime in seconds: %f", (System
+            .currentTimeMillis() - start) / 1000.0));
+    return swd;
+  }
   public static void fit(Config config, SamplesWithData swd) {
     // TODO(eighty)
-  }
-
-  /**
-   * Returns a layer by it's filename.
-   * 
-   * @param filename name of the layer
-   * @return the layer
-   */
-  public static Layer getLayer(String filename) {
-    return layerMap.get(filename);
   }
 
   public static SamplesWithData getRandomBackgroundData(Config config,
@@ -73,11 +97,7 @@ public enum MaxEntService {
    * @return samples with data
    */
   public static SamplesWithData swd(List<Sample> samples, List<Layer> layers) {
-    MaxEntService.layers.addAll(layers);
-    for (Layer l : layers) {
-      layerMap.put(new File(l.getPath()).getName(), l);
-    }
-
+    long start = System.currentTimeMillis();
     SamplesWithData swd = null;
     SwdBuilder sb = new SwdBuilder();
     try {
@@ -89,7 +109,7 @@ public enum MaxEntService {
       ConfigBuilder cb = new ConfigBuilder();
       cb.addOption(Option.SAMPLESFILE, sout.getPath());
       cb.addLayers(layers);
-      String[] argv = samplesWithDataArgv(cb);
+      String[] argv = swdArgv(cb);
 
       // Redirects standard output to SWD file:
       File swdout = File.createTempFile("swd", ".csv");
@@ -99,16 +119,39 @@ public enum MaxEntService {
 
       // Dispatches to MaxEnt to get SWD:
       Getval.main(argv);
+      System.setOut(System.out);
 
-      swd = SamplesWithData.fromCsv(swdout.getPath());
+      // Loads samples with data from SWD CSV that MaxEnt just created:
+      final Map<String, Layer> layerNames = new HashMap<String, Layer>();
+      for (Layer l : layers) {
+        layerNames.put(l.getFilename(), l);
+      }
+      swd = SamplesWithData.fromCsv(swdout.getPath(), new LayerProvider() {
+        public Layer getLayerByFilename(String filename) {
+          return layerNames.get(filename);
+        }
+      });
     } catch (Exception e) {
       log.error(e);
       swd = sb.build();
     }
+    log.info(String.format("MaxEntService.swd runtime in seconds: %f", (System
+        .currentTimeMillis() - start) / 1000.0));
     return swd;
   }
 
-  private static String[] samplesWithDataArgv(ConfigBuilder cb) {
+  private static String[] backgroundSwdArgv(ConfigBuilder cb, int n) {
+    List<Layer> layers = cb.getLayers();
+    String[] argv = new String[layers.size() + 1];
+    argv[0] = Integer.toString(n);
+    int count = 1;
+    for (Layer l : layers) {
+      argv[count++] = l.getPath();
+    }
+    return argv;
+  }
+
+  private static String[] swdArgv(ConfigBuilder cb) {
     List<Layer> layers = cb.getLayers();
     String samplesPath = cb.getOption(Option.SAMPLESFILE);
     String[] argv = new String[layers.size() + 1];
