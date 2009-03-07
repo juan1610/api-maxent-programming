@@ -7,8 +7,8 @@
 {{{
 List<Layer> layers = LayerTest.getTestLayers();
 List<Sample> samples = SampleTest.getTestSamples();
+
 SamplesWithData swd = MaxEntService.swd(samples, layers);
-log.info("SWD size: " + swd.size());
 for (Entry<Sample, CellData> entry : swd.getData()) {
   Sample sample = entry.getKey();
   CellData data = entry.getValue();
@@ -20,7 +20,6 @@ for (Entry<Sample, CellData> entry : swd.getData()) {
                             sample, cell, layer, value));
   }
 }
-String path = File.createTempFile("swdtest", ".csv").getPath();
+
 swd.toCsv(path);
-}
 }}}
