@@ -16,6 +16,7 @@
 package edu.berkeley.mvz.amp;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StreamTokenizer;
@@ -29,6 +30,22 @@ import java.io.StreamTokenizer;
  * This class is immutable and it is not designed for inheritance.
  */
 public class Layer {
+
+  /**
+   * This interface can be used by clients who need a layer identified only by
+   * it's filename. For example, this is useful when loading samples with data
+   * from a CSV file where the layers are only identified by name in the header.
+   * 
+   */
+  public static interface LayerProvider {
+    /**
+     * Returns a layer given a filename or null if a layer cannot be provided.
+     * 
+     * @param filename the layer filename
+     * @return the layer or null
+     */
+    public Layer getLayerByFilename(String filename);
+  }
 
   /**
    * Enumeration of layer types.
@@ -144,9 +161,12 @@ public class Layer {
     return new Layer(type, name, year, path);
   }
 
+  private final String filename;
+
   private final int nRows;
 
   private final int nCols;
+
   private final int year;
   private final double res;
   private final int noData;
@@ -160,6 +180,7 @@ public class Layer {
     this.name = name;
     this.year = year;
     this.path = path;
+    filename = new File(path).getName();
 
     AsciiHeader header;
     try {
@@ -269,6 +290,10 @@ public class Layer {
     }
     Layer l = (Layer) o;
     return l.getPath().equals(path);
+  }
+
+  public String getFilename() {
+    return filename;
   }
 
   /**
@@ -387,6 +412,6 @@ public class Layer {
 
   @Override
   public String toString() {
-    return path;
+    return filename;
   }
 }

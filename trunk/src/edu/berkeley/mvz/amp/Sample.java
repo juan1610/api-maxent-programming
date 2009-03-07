@@ -129,11 +129,15 @@ public class Sample implements Comparable<Sample> {
    */
   @Override
   public boolean equals(Object other) {
+    if (other == this) {
+      return true;
+    }
     if (!(other instanceof Sample)) {
       return false;
     }
     Sample s = (Sample) other;
-    return name == s.name && year == s.year && point.equals(s.point);
+    boolean b = name.equals(s.name) && year == s.year && point.equals(s.point);
+    return b;
   }
 
   /**

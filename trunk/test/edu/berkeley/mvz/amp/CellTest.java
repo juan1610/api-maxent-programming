@@ -26,7 +26,7 @@ import org.junit.Test;
  * Unit tests for {@link Cell}.
  * 
  */
-public class CellUnitTests {
+public class CellTest {
 
   private static void createInvalidCell(int row, int col) {
     try {

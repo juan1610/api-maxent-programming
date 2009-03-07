@@ -16,18 +16,22 @@
 package edu.berkeley.mvz.amp;
 
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import au.com.bytecode.opencsv.CSVReader;
+import au.com.bytecode.opencsv.CSVWriter;
+import edu.berkeley.mvz.amp.Layer.LayerProvider;
 
 /**
- * An immutable class that can be used to represent Samples With Data (SWD). It
- * encapsulates a list of samples and a list of layers. For each sample and
+ * An immutable class that can be used to represent Samples With CellData (SWD).
+ * It encapsulates a list of samples and a list of layers. For each sample and
  * layer combination you can get the sampled value for the layer. It is not
  * designed for inheritance and is therefore prohibited.
  * 
@@ -40,7 +44,12 @@ public class SamplesWithData {
    * 
    */
   public static class SwdBuilder {
-    private final Map<Sample, Data> sampleData = new HashMap<Sample, Data>();
+
+    private final Map<Sample, Map<Layer, Double>> sampleData;
+
+    public SwdBuilder() {
+      sampleData = new HashMap<Sample, Map<Layer, Double>>();
+    }
 
     /**
      * Adds the sample value for the layer.
@@ -50,54 +59,43 @@ public class SamplesWithData {
      * @param value the sampled layer value
      * @return the builder
      */
-    public SwdBuilder addSampleData(Sample sample, Layer Layer, double value) {
+    public SwdBuilder addData(Sample sample, Layer Layer, double value) {
       if (!sampleData.containsKey(sample)) {
-        sampleData.put(sample, new Data());
+        sampleData.put(sample, new HashMap<Layer, Double>());
       }
-      sampleData.get(sample).putGridValue(Layer, value);
+      sampleData.get(sample).put(Layer, value);
       return this;
     }
 
     /**
      * Builds and returns a {@link SamplesWithData} instance.
      * 
-     * @return samples with data
+     * @return samples with CellData
      */
     public SamplesWithData build() {
-      return new SamplesWithData(sampleData);
-    }
-  }
-
-  private static class Data {
-    Map<Layer, Double> gridValues = new HashMap<Layer, Double>();
-
-    @Override
-    public String toString() {
-      return gridValues.toString();
-    }
-
-    List<Layer> getGrids() {
-      Set<Layer> grids = gridValues.keySet();
-      return new ArrayList<Layer>(grids);
-    }
-
-    double getGridValue(Layer Layer) {
-      return gridValues.get(Layer);
-    }
-
-    void putGridValue(Layer Layer, double value) {
-      gridValues.put(Layer, value);
+      Map<Sample, CellData> data = new HashMap<Sample, CellData>();
+      Sample s;
+      Cell c;
+      Map<Layer, Double> layerValues;
+      for (Entry<Sample, Map<Layer, Double>> e : sampleData.entrySet()) {
+        s = e.getKey();
+        layerValues = e.getValue();
+        c = layerValues.keySet().iterator().next().asCell(s.getPoint());
+        data.put(s, CellData.newInstance(c, layerValues));
+      }
+      return new SamplesWithData(data);
     }
   }
 
   /**
-   * Returns samples from data loaded from a CSV file.
+   * Returns samples from CellData loaded from a CSV file.
    * 
    * @param path the CSV file path
-   * @return samples with data
+   * @return samples with CellData
    * @throws IOException problem reading SWD file
    */
-  public static SamplesWithData fromCsv(String path) throws IOException {
+  public static SamplesWithData fromCsv(String path, LayerProvider provider)
+      throws IOException {
     SamplesWithData swd = null;
     SwdBuilder sb = new SwdBuilder();
     CSVReader reader = new CSVReader(new FileReader(path));
@@ -110,6 +108,7 @@ public class SamplesWithData {
       map.put(i, String.format("%s.asc", header[i]));
     }
 
+    // Reads sample with CellData from CSV and adds CellData to the builder:
     Sample s;
     Layer l;
     double lat, lng, value;
@@ -118,45 +117,37 @@ public class SamplesWithData {
       lat = Double.parseDouble(line[2]);
       s = Sample.newInstance(line[0], 0, LatLng.newInstance(lat, lng));
       for (Integer i : map.keySet()) {
-        l = MaxEntService.getLayer(map.get(i));
+        l = provider.getLayerByFilename(map.get(i));
         value = Double.parseDouble(line[i]);
-        sb.addSampleData(s, l, value);
+        sb.addData(s, l, value);
       }
     }
+
     swd = sb.build();
     return swd;
   }
 
-  /**
-   * Writes samples with data to disk in the MaxEnt SWD format.
-   * 
-   * @param path path to write SWD file
-   * @throws IOException problems writing to path
-   */
-  public static void toCsv(SamplesWithData swd) throws IOException {
-    // TODO(eighty)
-  }
+  private final Map<Sample, CellData> sampleData;
 
-  private final Map<Sample, Data> sampleData;
-
-  private SamplesWithData(Map<Sample, Data> sampleData) {
+  private SamplesWithData(Map<Sample, CellData> sampleData) {
     this.sampleData = sampleData;
   }
 
-  /**
-   * Returns the list of {@link Layer}s that provided data for these samples
-   * with data.
-   * 
-   * @return list of layers
-   */
-  public List<Layer> getLayers() {
-    List<Layer> layers = new ArrayList<Layer>();
-    Sample s = sampleData.keySet().iterator().next();
-    if (s != null) {
-      List<Layer> lg = sampleData.get(s).getGrids();
-      layers = new ArrayList<Layer>(lg);
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
-    return layers;
+    if (!(o instanceof SamplesWithData)) {
+      return false;
+    }
+    SamplesWithData swd = (SamplesWithData) o;
+    boolean b = sampleData.equals(swd.sampleData);
+    return b;
+  }
+
+  public Iterable<Entry<Sample, CellData>> getData() {
+    return new HashMap<Sample, CellData>(sampleData).entrySet();
   }
 
   /**
@@ -167,17 +158,80 @@ public class SamplesWithData {
    * @return layer value associated with sample
    */
   public double getData(Sample sample, Layer Layer) {
-    return sampleData.get(sample).getGridValue(Layer);
+    return sampleData.get(sample).getCellValue(Layer);
   }
 
   /**
-   * Returns the list of samples encapsulated by these samples with data.
+   * Returns the list of {@link Layer}s that provided CellData for these samples
+   * with CellData.
+   * 
+   * @return list of layers
+   */
+  public List<Layer> getLayers() {
+    return new ArrayList<Layer>(sampleData.values().iterator().next()
+        .getLayers());
+  }
+
+  /**
+   * Returns the list of samples encapsulated by these samples with CellData.
    * 
    * @return list of samples
    */
   public List<Sample> getSamples() {
     Set<Sample> samples = sampleData.keySet();
     return new ArrayList<Sample>(samples);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 17;
+    result = 31 * result + sampleData.hashCode();
+    return result;
+  }
+  /**
+   * Returns the size (number of unique samples) of this object.
+   * 
+   * @return
+   */
+  public int size() {
+    return sampleData.size();
+  }
+
+  /**
+   * Writes samples with CellData to disk in the MaxEnt SWD format.
+   * 
+   * @param path path to write SWD file
+   * @throws IOException problems writing to path
+   */
+  public void toCsv(String path) throws IOException {
+    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
+
+    // Writes the header that includes the layer filenames:
+    String[] header = new String[3 + getLayers().size()];
+    header[0] = "species";
+    header[1] = "dd long";
+    header[2] = "dd lat";
+    int count = 3;
+    for (Layer l : getLayers()) {
+      // MaxEnt header doesn't include file extension:
+      String[] name = l.getFilename().split(".asc");
+      header[count++] = name[0];
+    }
+    writer.writeNext(header);
+
+    String[] line = null;
+    LatLng p = null;
+    for (Sample s : getSamples()) {
+      p = s.getPoint();
+      String CellData = String.format("%s,%f,%f", s.getName(),
+          p.getLongitude(), p.getLatitude());
+      for (Layer l : getLayers()) {
+        CellData += "," + getData(s, l);
+      }
+      line = CellData.split(",");
+      writer.writeNext(line);
+    }
+    writer.close();
   }
 
   @Override

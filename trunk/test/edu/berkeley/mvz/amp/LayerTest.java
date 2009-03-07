@@ -15,7 +15,11 @@
  */
 package edu.berkeley.mvz.amp;
 
+import static edu.berkeley.mvz.amp.Layer.LayerType.CLIMATE;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import junit.framework.Assert;
@@ -29,13 +33,37 @@ import edu.berkeley.mvz.amp.Layer.LayerType;
  * Unit tests for {@link Layer}.
  * 
  */
-public class LayerUnitTests {
+public class LayerTest {
+  private final static Map<String, Layer> layerNames = new HashMap<String, Layer>();
 
-  private static Logger log = Logger.getLogger(LayerUnitTests.class);
+  private static Logger log = Logger.getLogger(LayerTest.class);
+
+  private static ArrayList<Layer> layers;
+
+  static {
+    layers = new ArrayList<Layer>();
+    layers.add(Layer.newInstance(CLIMATE, "foo", 0, path("cld6190_ann.asc")));
+    layers.add(Layer.newInstance(CLIMATE, "bar", 0, path("h_dem.asc")));
+    for (Layer l : layers) {
+      layerNames.put(l.getFilename(), l);
+    }
+  }
+
+  public static Map<String, Layer> getTestLayerMap() {
+    return new HashMap<String, Layer>(layerNames);
+  }
+
+  public static List<Layer> getTestLayers() {
+    return layers;
+  }
+
+  private static String path(String name) {
+    return MaxEntServiceTest.class.getResource(name).getPath();
+  }
 
   @Test
   public void testConstructor() {
-    String path = LayerUnitTests.class.getResource("valid-header.asc").getPath();
+    String path = LayerTest.class.getResource("valid-header.asc").getPath();
     try {
       Layer.newInstance(null, "valid-header", 0, path);
       Assert.fail();
@@ -68,7 +96,7 @@ public class LayerUnitTests {
 
   @Test
   public void testContainsPointAndGetCell() {
-    String path = LayerUnitTests.class.getResource("valid-header.asc").getPath();
+    String path = LayerTest.class.getResource("valid-header.asc").getPath();
     Layer l = Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path);
     log.info(l);
     int nrows = l.getNRows();
@@ -94,18 +122,22 @@ public class LayerUnitTests {
 
   @Test
   public void testEquals() {
-    String path = LayerUnitTests.class.getResource("valid-header.asc").getPath();
-    Layer l = Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path);
+    String path = LayerTest.class.getResource("valid-header.asc").getPath();
+    Layer l = Layer.newInstance(LayerType.CLIMATE, "foo", 0, path);
     Map<Layer, String> map = new HashMap<Layer, String>();
-    map.put(l, "valid-header");
+    map.put(l, "foo");
     String name = map.get(Layer.newInstance(LayerType.CLIMATE, "valid-header",
         0, path));
-    Assert.assertEquals(name, "valid-header");
+    Assert.assertEquals(name, "foo");
+
+    Map<Layer, String> map2 = new HashMap<Layer, String>();
+    map2.put(Layer.newInstance(LayerType.CLIMATE, "foo", 0, path), "foo");
+    Assert.assertEquals(map, map2);
   }
 
   @Test
   public void testHeader() {
-    String path = LayerUnitTests.class.getResource("valid-header.asc").getPath();
+    String path = LayerTest.class.getResource("valid-header.asc").getPath();
     Layer l;
     try {
       l = Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path);
@@ -120,7 +152,7 @@ public class LayerUnitTests {
       Assert.fail(e.toString());
     }
 
-    path = LayerUnitTests.class.getResource("invalid-header.asc").getPath();
+    path = LayerTest.class.getResource("invalid-header.asc").getPath();
     try {
       l = Layer.newInstance(LayerType.CLIMATE, "valid-header", 0, path);
       Assert.fail();

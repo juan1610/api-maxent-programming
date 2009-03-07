@@ -15,17 +15,24 @@
  */
 package edu.berkeley.mvz.amp;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-/**
- * Unit tests for {@link Sample}.
- * 
- */
-public class SampleUnitTests {
-  private static Logger log = Logger.getLogger(SampleUnitTests.class);
+public class SampleTest {
+  private static Logger log = Logger.getLogger(SampleTest.class);
+
+  public static List<Sample> getTestSamples() throws IOException {
+    String path = SamplesWithDataTest.class.getResource("samples.csv")
+        .getPath();
+    return Sample.fromCsv(path, 2009);
+  }
 
   private static boolean throwsException(String name, LatLng point) {
     try {
@@ -38,13 +45,28 @@ public class SampleUnitTests {
   }
 
   @Test
+  public void equals() {
+    double lat = 90, lng = 180;
+    LatLng point = LatLng.newInstance(lat, lng);
+    Sample s1 = Sample.newInstance("foo", 0, point);
+    Sample s2 = Sample.newInstance("foo", 0, point);
+    Assert.assertEquals(s1, s2);
+
+    Map<Sample, String> map1 = new HashMap<Sample, String>();
+    map1.put(s1, "point");
+    Map<Sample, String> map2 = new HashMap<Sample, String>();
+    map2.put(Sample.newInstance("foo", 0, point), "point");
+    Assert.assertEquals("point", map1.get(Sample.newInstance("foo", 0, point)));
+    Assert.assertEquals(map1, map2);
+  }
+
+  @Test
   public void newInstance() {
     Assert.assertTrue(throwsException(null, null));
     Assert.assertTrue(throwsException(null, LatLng.newInstance(0, 0)));
     Assert.assertTrue(throwsException("sample", null));
     Assert.assertTrue(throwsException("", LatLng.newInstance(0, 0)));
     Assert.assertFalse(throwsException("sample", LatLng.newInstance(0, 0)));
-
     Sample s = Sample.newInstance("sample", 2009, LatLng.newInstance(0, 0));
     Assert.assertEquals("sample", s.getName());
     Assert.assertEquals(2009, s.getYear());
