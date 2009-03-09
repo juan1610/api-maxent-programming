@@ -29,17 +29,19 @@ import density.Getval;
 import density.MaxEnt;
 import density.tools.RandomSample;
 import edu.berkeley.mvz.amp.Layer.LayerProvider;
-import edu.berkeley.mvz.amp.MaxEntResults.ResultBuilder;
-import edu.berkeley.mvz.amp.MaxEntRun.Option;
-import edu.berkeley.mvz.amp.MaxEntRun.RunConfig;
-import edu.berkeley.mvz.amp.MaxEntRun.RunType;
+import edu.berkeley.mvz.amp.MaxentResults.ResultBuilder;
+import edu.berkeley.mvz.amp.MaxentRun.Option;
+import edu.berkeley.mvz.amp.MaxentRun.RunConfig;
+import edu.berkeley.mvz.amp.MaxentRun.RunType;
 
 /**
- * This singleton class can be used to execute MaxEnt runs synchronously or
+ * This class can be used to execute {@link MaxentRun}s synchronously or
  * asynchronously.
  * 
+ * Note: This class is a singleton.
+ * 
  */
-public enum MaxEntService {
+public enum MaxentService {
 
   INSTANCE;
 
@@ -61,7 +63,7 @@ public enum MaxEntService {
      * @param run the run that completed
      * @param results the results
      */
-    public void onSuccess(MaxEntRun run, MaxEntResults results);
+    public void onSuccess(MaxentRun run, MaxentResults results);
   };
 
   /**
@@ -88,7 +90,7 @@ public enum MaxEntService {
     }
   }
 
-  private static Logger log = Logger.getLogger(MaxEntService.class);
+  private static Logger log = Logger.getLogger(MaxentService.class);
 
   /**
    * Creates and returns a new background SWD run.
@@ -97,7 +99,7 @@ public enum MaxEntService {
    * @param layers background layers
    * @return background SWD run
    */
-  public static MaxEntRun createSwdRun(int n, List<Layer> layers) {
+  public static MaxentRun createSwdRun(int n, List<Layer> layers) {
     if (n < 1) {
       throw new IllegalArgumentException("n can't be negative");
     }
@@ -112,7 +114,7 @@ public enum MaxEntService {
    * @param layers the layers
    * @return SWD run
    */
-  public static MaxEntRun createSwdRun(List<Sample> samples, List<Layer> layers) {
+  public static MaxentRun createSwdRun(List<Sample> samples, List<Layer> layers) {
     return new RunConfig(RunType.SWD).samples(samples).layers(layers).build();
   }
 
@@ -124,12 +126,12 @@ public enum MaxEntService {
    * @return results
    * @throws MaxEntException
    */
-  public static MaxEntResults execute(MaxEntRun run) throws MaxEntException {
+  public static MaxentResults execute(MaxentRun run) throws MaxEntException {
     if (run == null) {
       throw new NullPointerException("The run options were null");
     }
     long start = System.currentTimeMillis();
-    MaxEntResults results = dispatch(run);
+    MaxentResults results = dispatch(run);
     log.info(String.format("%s runtime: %f sec ", run.getType(), (System
         .currentTimeMillis() - start) / 1000.0));
     return results;
@@ -141,7 +143,7 @@ public enum MaxEntService {
    * @param run the run to execute
    * @param cb the async callback
    */
-  public static void executeAsync(final MaxEntRun run, final AsyncRunCallback cb) {
+  public static void executeAsync(final MaxentRun run, final AsyncRunCallback cb) {
     if (run == null) {
       throw new NullPointerException("The run options were null");
     }
@@ -152,7 +154,7 @@ public enum MaxEntService {
     new Thread(new Runnable() {
       public void run() {
         try {
-          MaxEntResults results = dispatch(run);
+          MaxentResults results = dispatch(run);
           cb.onSuccess(run, results);
         } catch (MaxEntException e) {
           cb.onFailure(e);
@@ -174,7 +176,7 @@ public enum MaxEntService {
     return argv;
   }
 
-  private static MaxEntResults dispatch(MaxEntRun run) throws MaxEntException {
+  private static MaxentResults dispatch(MaxentRun run) throws MaxEntException {
     ResultBuilder builder = null;
     try {
       RunConfig config = new RunConfig(run).add(Option.AUTORUN).add(
@@ -193,10 +195,15 @@ public enum MaxEntService {
               .getProjectionLayers()));
         }
       }
-      MaxEntRun actualRun = config.build();
+      MaxentRun actualRun = config.build();
       switch (actualRun.getType()) {
       case MODEL:
         builder = new ResultBuilder(run.getOption(Option.OUTPUTDIRECTORY));
+        String replicates = run.getOption(Option.REPLICATES);
+        if (replicates != null) {
+          int runCount = Integer.parseInt(replicates);
+          builder.runCount(runCount);
+        }
         MaxEnt.main(actualRun.asArgv());
         break;
       case BACKGROUND_SWD:
@@ -216,7 +223,7 @@ public enum MaxEntService {
     }
   }
 
-  private static SamplesWithData dispatchBackgroundSwd(MaxEntRun run)
+  private static SamplesWithData dispatchBackgroundSwd(MaxentRun run)
       throws MaxEntException, IOException {
     String value = run.getOption(Option.BACKGROUNDPOINTS);
     int n;
@@ -249,7 +256,7 @@ public enum MaxEntService {
     });
   }
 
-  private static SamplesWithData dispatchSwd(MaxEntRun run) throws Exception {
+  private static SamplesWithData dispatchSwd(MaxentRun run) throws Exception {
     SamplesWithData swd = null;
     RunConfig options = new RunConfig(RunType.SWD);
     options.add(Option.SAMPLESFILE, Sample.toTempCsv(run.getSamples()));

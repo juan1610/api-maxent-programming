@@ -17,9 +17,7 @@ package edu.berkeley.mvz.amp;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -27,17 +25,16 @@ import java.util.Set;
  * include outputs for each modeled species.
  * 
  */
-public class MaxEntResults {
+public class MaxentResults {
 
   /**
    * This class is used to build MaxEnt results.
    * 
    */
   public static class ResultBuilder {
-
     private String outputDir;
-
     private SamplesWithData swd;
+    private int runCount;
 
     /**
      * Constructs a result builder.
@@ -64,8 +61,22 @@ public class MaxEntResults {
      * 
      * @return MaxEnt results
      */
-    public MaxEntResults build() {
-      return new MaxEntResults(this);
+    public MaxentResults build() {
+      return new MaxentResults(this);
+    }
+
+    /**
+     * Adds the number of Maxent runs to this builder.
+     * 
+     * @param n number of runs
+     * @return this builder
+     */
+    public ResultBuilder runCount(int n) {
+      if (n < 1) {
+        throw new IllegalArgumentException("Run count was negative");
+      }
+      runCount = n;
+      return this;
     }
 
     /**
@@ -80,31 +91,32 @@ public class MaxEntResults {
     }
   }
 
-  private final Map<String, MaxEntOutputs> outputs = new HashMap<String, MaxEntOutputs>();
-
   private final SamplesWithData swd;
 
-  private final String dir;
+  private final String directory;
 
   private Set<String> names;
 
-  private MaxEntResults(ResultBuilder builder) {
+  private final int runCount;
+
+  private MaxentResults(ResultBuilder builder) {
     swd = builder.swd;
-    dir = builder.outputDir;
-    if (dir != null) {
-      for (String s : getSpeciesNames()) {
-        outputs.put(s, MaxEntOutputs.newInstance(dir, s));
-      }
-    }
+    directory = builder.outputDir;
+    runCount = builder.runCount;
   }
 
   /**
-   * Returns a mapping of species names to their MaxEnt results.
-   * 
-   * @return mapping of species names to MaxEnt results
+   * @return the directory where the results are stored
    */
-  public Map<String, MaxEntOutputs> getOutputs() {
-    return new HashMap<String, MaxEntOutputs>(outputs);
+  public String getDirectory() {
+    return directory;
+  }
+
+  /**
+   * @return the runCount
+   */
+  public int getRunCount() {
+    return runCount;
   }
 
   /**
@@ -124,7 +136,7 @@ public class MaxEntResults {
   public Set<String> getSpeciesNames() {
     if (names == null) {
       names = new HashSet<String>();
-      for (File f : new File(dir).listFiles(new FilenameFilter() {
+      for (File f : new File(directory).listFiles(new FilenameFilter() {
         public boolean accept(File dir, String name) {
           return name.endsWith(".lambdas");
         }
@@ -141,6 +153,6 @@ public class MaxEntResults {
    * @return size of results
    */
   public int size() {
-    return outputs.size();
+    return names.size();
   }
 }

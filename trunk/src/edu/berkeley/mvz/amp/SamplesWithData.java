@@ -74,7 +74,7 @@ public class SamplesWithData {
      * @return samples with CellData
      */
     public SamplesWithData build() {
-      Map<Sample, CellData> data = new HashMap<Sample, CellData>();
+      Map<Sample, Data> data = new HashMap<Sample, Data>();
       Sample s;
       Cell c;
       Map<Layer, Double> layerValues;
@@ -82,7 +82,7 @@ public class SamplesWithData {
         s = e.getKey();
         layerValues = e.getValue();
         c = layerValues.keySet().iterator().next().asCell(s.getPoint());
-        data.put(s, CellData.newInstance(c, layerValues));
+        data.put(s, Data.newInstance(c, layerValues));
       }
       return new SamplesWithData(data);
     }
@@ -128,9 +128,9 @@ public class SamplesWithData {
     return swd;
   }
 
-  private final Map<Sample, CellData> sampleData;
+  private final Map<Sample, Data> sampleData;
 
-  private SamplesWithData(Map<Sample, CellData> sampleData) {
+  private SamplesWithData(Map<Sample, Data> sampleData) {
     this.sampleData = sampleData;
   }
 
@@ -147,7 +147,7 @@ public class SamplesWithData {
     return b;
   }
 
-  public CellData getData(Sample sample) {
+  public Data getData(Sample sample) {
     return sampleData.get(sample);
   }
 

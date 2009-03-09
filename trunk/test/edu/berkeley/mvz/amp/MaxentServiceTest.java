@@ -21,15 +21,15 @@ import org.apache.log4j.Logger;
 import org.junit.Test;
 
 /**
- * Unit tests for {@link MaxEntService}.
+ * Unit tests for {@link MaxentService}.
  * 
  */
-public class MaxEntServiceTest {
+public class MaxentServiceTest {
 
-  private static Logger log = Logger.getLogger(MaxEntServiceTest.class);
+  private static Logger log = Logger.getLogger(MaxentServiceTest.class);
 
   static {
-    log.info(String.format("%s starting", MaxEntServiceTest.class.getName()));
+    log.info(String.format("%s starting", MaxentServiceTest.class.getName()));
   }
 
   @Test

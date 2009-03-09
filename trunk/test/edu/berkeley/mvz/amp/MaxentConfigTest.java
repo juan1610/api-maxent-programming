@@ -18,12 +18,12 @@ package edu.berkeley.mvz.amp;
 import org.apache.log4j.Logger;
 
 /**
- * Unit tests for {@link MaxEntRun}.
+ * Unit tests for {@link MaxentRun}.
  * 
  */
-public class MaxEntConfigTest {
+public class MaxentConfigTest {
 
-  private static Logger log = Logger.getLogger(MaxEntConfigTest.class);
+  private static Logger log = Logger.getLogger(MaxentConfigTest.class);
 
   // @Test
   // public void addOption() {

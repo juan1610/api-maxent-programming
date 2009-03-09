@@ -40,7 +40,7 @@ public class SamplesWithDataTest {
   // }
 
   private static String path(String name) {
-    return MaxEntServiceTest.class.getResource(name).getPath();
+    return MaxentServiceTest.class.getResource(name).getPath();
   }
 
   @Test
