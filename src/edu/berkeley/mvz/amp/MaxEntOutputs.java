@@ -54,8 +54,9 @@ public class MaxEntOutputs {
     results = String.format("%s%s", dir, "maxentResults.csv");
     lambdas = String.format("%s%s%s", dir, species, ".lambdas");
     log = String.format("%s%s", dir, "maxent.log");
-    omissionsPlot = String.format("%s%s%s", dir, species, "_omission.png");
-    rocPlot = String.format("%s%s%s", dir, species, "_roc.png");
+    omissionsPlot = String
+        .format("%splots/%s%s", dir, species, "_omission.png");
+    rocPlot = String.format("%splots/%s%s", dir, species, "_roc.png");
     html = String.format("%s%s%s", dir, species, ".html");
     logistics = String.format("%s%s%s", dir, species, ".csv");
   }
@@ -162,6 +163,6 @@ public class MaxEntOutputs {
 
   @Override
   public String toString() {
-    return String.format("Dir=%s species=%s", dir, species);
+    return String.format("Dir=%s Species=%s", dir, species);
   }
 }

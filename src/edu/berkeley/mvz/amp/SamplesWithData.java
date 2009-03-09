@@ -198,7 +198,7 @@ public class SamplesWithData {
     return sampleData.size();
   }
 
-  public String toCsv() throws IOException {
+  public String toTempCsv() throws IOException {
     String path = File.createTempFile("swd", ".csv").getPath();
     toCsv(path);
     return path;

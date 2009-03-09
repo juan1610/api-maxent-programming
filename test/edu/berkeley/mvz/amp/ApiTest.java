@@ -52,7 +52,7 @@ public class ApiTest {
 
     MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
-        swd.toCsv()).add(Option.ENVIRONMENTALLAYERS, background.toCsv())
+        swd.toTempCsv()).add(Option.ENVIRONMENTALLAYERS, background.toTempCsv())
         .build();
 
     MaxEntResults results = MaxEntService.execute(modelRun);
@@ -74,8 +74,8 @@ public class ApiTest {
 
     MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-async").add(
-        Option.SAMPLESFILE, swd.toCsv()).add(Option.ENVIRONMENTALLAYERS,
-        background.toCsv()).build();
+        Option.SAMPLESFILE, swd.toTempCsv()).add(Option.ENVIRONMENTALLAYERS,
+        background.toTempCsv()).build();
 
     MaxEntService.executeAsync(modelRun, new AsyncRunCallback() {
       public void onFailure(Throwable t) {
@@ -101,4 +101,5 @@ public class ApiTest {
       }
     }, 10000);
   }
+
 }
