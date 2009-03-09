@@ -69,8 +69,8 @@ class CellData {
     if (!(o instanceof CellData)) {
       return false;
     }
-    CellData CellValues = (CellData) o;
-    boolean b = layerValues.equals(CellValues.layerValues);
+    CellData cd = (CellData) o;
+    boolean b = layerValues.equals(cd.layerValues) && cell.equals(cd.cell);
     return b;
   }
 
@@ -84,16 +84,6 @@ class CellData {
   }
 
   /**
-   * Returns the cell value for a given layer.
-   * 
-   * @param Layer the layer
-   * @return cell value for the layer
-   */
-  public double getCellValue(Layer Layer) {
-    return layerValues.get(Layer);
-  }
-
-  /**
    * Returns the list of layers that corresponding cell values are available for
    * reading.
    * 
@@ -104,12 +94,13 @@ class CellData {
   }
 
   /**
-   * Returns the iterable mapping of layer values.
+   * Returns the cell value for a given layer.
    * 
-   * @return iterable mapping of layer values
+   * @param Layer the layer
+   * @return cell value for the layer
    */
-  public Iterable<Entry<Layer, Double>> getValues() {
-    return new HashMap<Layer, Double>(layerValues).entrySet();
+  public double getValue(Layer Layer) {
+    return layerValues.get(Layer);
   }
 
   @Override

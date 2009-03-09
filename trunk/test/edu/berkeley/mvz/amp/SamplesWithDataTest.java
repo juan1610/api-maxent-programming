@@ -15,8 +15,6 @@
  */
 package edu.berkeley.mvz.amp;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +23,6 @@ import junit.framework.Assert;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-import edu.berkeley.mvz.amp.Layer.LayerProvider;
 import edu.berkeley.mvz.amp.Layer.LayerType;
 
 /**
@@ -35,12 +32,12 @@ import edu.berkeley.mvz.amp.Layer.LayerType;
 public class SamplesWithDataTest {
   private static Logger log = Logger.getLogger(SamplesWithDataTest.class);
 
-  public static SamplesWithData getTestSwd() throws IOException {
-    List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
-    List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
-        .values());
-    return MaxEntService.swd(samples, layers);
-  }
+  // public static SamplesWithData getTestSwd() throws IOException {
+  // List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
+  // List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
+  // .values());
+  // return MaxEntService.swd(samples, layers);
+  // }
 
   private static String path(String name) {
     return MaxEntServiceTest.class.getResource(name).getPath();
@@ -63,45 +60,45 @@ public class SamplesWithDataTest {
         lpath));
   }
 
-  @Test
-  public void equals() throws IOException {
-    SamplesWithData swd = getTestSwd();
-    SamplesWithData swd2 = SamplesWithData.fromCsv(path("maxent-swd.txt"),
-        new LayerProvider() {
-          public Layer getLayerByFilename(String filename) {
-            return LayerTest.getTestLayerMap().get(filename);
-          }
-        });
-    Assert.assertEquals(swd, swd2);
-  }
-
-  @Test
-  public void toCsv() throws IOException {
-    List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
-    List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
-        .values());
-    SamplesWithData swd = MaxEntService.swd(samples, layers);
-    Assert.assertNotNull(swd.getSamples());
-    Assert.assertFalse(swd.getSamples().isEmpty());
-    Assert.assertNotNull(swd.getLayers());
-    Assert.assertFalse(swd.getLayers().isEmpty());
-
-    // Writes swd to csv:
-    String path = File.createTempFile("toCsv", ".csv").getPath();
-    swd.toCsv(path);
-    log.info("wrote SWD to " + path);
-
-    // Reads swd from csv:
-    SamplesWithData swd2 = SamplesWithData.fromCsv(path, new LayerProvider() {
-      public Layer getLayerByFilename(String filename) {
-        return LayerTest.getTestLayerMap().get(filename);
-      }
-    });
-    log.info("loaded SWD to " + path);
-
-    // Boths swds should be equal.
-    log.info("swd1: " + swd);
-    log.info("swd2: " + swd2);
-    Assert.assertEquals(swd, swd2);
-  }
+  // @Test
+  // public void equals() throws IOException {
+  // SamplesWithData swd = getTestSwd();
+  // SamplesWithData swd2 = SamplesWithData.fromCsv(path("maxent-swd.txt"),
+  // new LayerProvider() {
+  // public Layer getLayerByFilename(String filename) {
+  // return LayerTest.getTestLayerMap().get(filename);
+  // }
+  // });
+  // Assert.assertEquals(swd, swd2);
+  // }
+  //
+  // @Test
+  // public void toCsv() throws IOException {
+  // List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
+  // List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
+  // .values());
+  // SamplesWithData swd = MaxEntService.swd(samples, layers);
+  // Assert.assertNotNull(swd.getSamples());
+  // Assert.assertFalse(swd.getSamples().isEmpty());
+  // Assert.assertNotNull(swd.getLayers());
+  // Assert.assertFalse(swd.getLayers().isEmpty());
+  //
+  // // Writes swd to csv:
+  // String path = File.createTempFile("toCsv", ".csv").getPath();
+  // swd.toCsv(path);
+  // log.info("wrote SWD to " + path);
+  //
+  // // Reads swd from csv:
+  // SamplesWithData swd2 = SamplesWithData.fromCsv(path, new LayerProvider() {
+  // public Layer getLayerByFilename(String filename) {
+  // return LayerTest.getTestLayerMap().get(filename);
+  // }
+  // });
+  // log.info("loaded SWD to " + path);
+  //
+  // // Boths swds should be equal.
+  // log.info("swd1: " + swd);
+  // log.info("swd2: " + swd2);
+  // Assert.assertEquals(swd, swd2);
+  // }
 }

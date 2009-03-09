@@ -15,6 +15,7 @@
  */
 package edu.berkeley.mvz.amp;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -79,6 +80,20 @@ public class Sample implements Comparable<Sample> {
           "A point is required", point));
     }
     return new Sample(name, year, point);
+  }
+
+  public static String toTempCsv(List<Sample> samples) throws IOException {
+    String path = File.createTempFile("samples", ".csv").getPath();
+    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
+    String[] line = { "species", "dd long", "dd lat" };
+    writer.writeNext(line);
+    for (Sample s : samples) {
+      line = String.format("%s,%f,%f", s.getName(),
+          s.getPoint().getLongitude(), s.getPoint().getLatitude()).split(",");
+      writer.writeNext(line);
+    }
+    writer.close();
+    return path;
   }
 
   /**

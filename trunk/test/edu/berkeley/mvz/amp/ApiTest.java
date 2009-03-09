@@ -15,13 +15,21 @@
  */
 package edu.berkeley.mvz.amp;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
+
+import edu.berkeley.mvz.amp.MaxEntRun.Option;
+import edu.berkeley.mvz.amp.MaxEntRun.RunConfig;
+import edu.berkeley.mvz.amp.MaxEntRun.RunType;
+import edu.berkeley.mvz.amp.MaxEntService.AsyncRunCallback;
+import edu.berkeley.mvz.amp.MaxEntService.MaxEntException;
 
 public class ApiTest {
   private static Logger log = Logger.getLogger(ApiTest.class);
@@ -31,17 +39,66 @@ public class ApiTest {
   }
 
   @Test
-  public void swdUseCase() throws IOException {
+  public void model() throws MaxEntException, IOException {
     List<Layer> layers = LayerTest.getTestLayers();
     List<Sample> samples = SampleTest.getTestSamples();
-    SamplesWithData swd = MaxEntService.swd(samples, layers);
-    log.info("SWD size: " + swd.size());
-    for (Entry<Sample, CellData> entry : swd.getData()) {
-      Sample sample = entry.getKey();
-      CellData data = entry.getValue();
-      log.info(String.format("Sample %s Data %s", sample.getPoint(), data));
-    }
-    String path = File.createTempFile("swdtest", ".csv").getPath();
-    swd.toCsv(path);
+
+    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
+
+    swdRun = MaxEntService.createSwdRun(10000, layers);
+    SamplesWithData background = MaxEntService.execute(swdRun)
+        .getSamplesWithData();
+
+    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
+        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
+        swd.toCsv()).add(Option.ENVIRONMENTALLAYERS, background.toCsv())
+        .build();
+
+    MaxEntResults results = MaxEntService.execute(modelRun);
+    Assert.assertNotNull(results);
+    log.info(results.getOutputs());
+  }
+
+  @Test
+  public void modelAsync() throws IOException, MaxEntException {
+    List<Layer> layers = LayerTest.getTestLayers();
+    List<Sample> samples = SampleTest.getTestSamples();
+
+    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
+
+    swdRun = MaxEntService.createSwdRun(10000, layers);
+    SamplesWithData background = MaxEntService.execute(swdRun)
+        .getSamplesWithData();
+
+    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
+        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-async").add(
+        Option.SAMPLESFILE, swd.toCsv()).add(Option.ENVIRONMENTALLAYERS,
+        background.toCsv()).build();
+
+    MaxEntService.executeAsync(modelRun, new AsyncRunCallback() {
+      public void onFailure(Throwable t) {
+        Assert.fail(t.toString());
+      }
+      public void onSuccess(MaxEntRun run, MaxEntResults results) {
+        Assert.assertNotNull(results);
+        log.info(results.getOutputs());
+      }
+    });
+
+    new Timer().scheduleAtFixedRate(new TimerTask() {
+      @Override
+      public void run() {
+        log.info("waiting...");
+      }
+    }, 0, 1000);
+
+    new Timer().schedule(new TimerTask() {
+      @Override
+      public void run() {
+        Assert.fail();
+      }
+    }, 10000);
   }
 }
