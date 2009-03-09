@@ -52,8 +52,8 @@ public class ApiTest {
 
     MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
-        swd.toTempCsv()).add(Option.ENVIRONMENTALLAYERS, background.toTempCsv())
-        .build();
+        swd.toTempCsv())
+        .add(Option.ENVIRONMENTALLAYERS, background.toTempCsv()).build();
 
     MaxEntResults results = MaxEntService.execute(modelRun);
     Assert.assertNotNull(results);
@@ -81,9 +81,10 @@ public class ApiTest {
       public void onFailure(Throwable t) {
         Assert.fail(t.toString());
       }
+
       public void onSuccess(MaxEntRun run, MaxEntResults results) {
         Assert.assertNotNull(results);
-        log.info(results.getOutputs());
+        log.info("Done: " + results.getOutputs());
       }
     });
 
@@ -99,7 +100,22 @@ public class ApiTest {
       public void run() {
         Assert.fail();
       }
-    }, 10000);
+    }, 60000);
+  }
+
+  @Test
+  public void modelPictures() throws MaxEntException, IOException {
+    List<Layer> layers = LayerTest.getTestLayers();
+    List<Sample> samples = SampleTest.getTestSamples();
+    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
+    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
+        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics").add(
+        Option.SAMPLESFILE, swd.toTempCsv()).layers(layers).projectionLayers(
+        layers).add(Option.PICTURES).build();
+    MaxEntResults results = MaxEntService.execute(modelRun);
+    Assert.assertNotNull(results);
+    log.info(results.getOutputs());
   }
 
 }

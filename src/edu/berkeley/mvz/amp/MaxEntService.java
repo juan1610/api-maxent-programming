@@ -134,6 +134,7 @@ public enum MaxEntService {
         .currentTimeMillis() - start) / 1000.0));
     return results;
   }
+
   /**
    * Executes a MaxEnt run asynchronously.
    * 
@@ -176,8 +177,23 @@ public enum MaxEntService {
   private static MaxEntResults dispatch(MaxEntRun run) throws MaxEntException {
     ResultBuilder builder = null;
     try {
-      MaxEntRun actualRun = new RunConfig(run).add(Option.AUTORUN).add(
-          Option.INVISIBLE).build();
+      RunConfig config = new RunConfig(run).add(Option.AUTORUN).add(
+          Option.INVISIBLE);
+      String dir = run.getOption(Option.OUTPUTDIRECTORY);
+      if (dir != null) {
+        dir = dir.endsWith(File.separator) ? dir : dir + File.separator;
+        if (!run.getLayers().isEmpty()) {
+          String d = String.format("%s%s", dir, "EnvLayers");
+          config.add(Option.ENVIRONMENTALLAYERS, symlinkLayers(d, run
+              .getLayers()));
+        }
+        if (!run.getProjectionLayers().isEmpty()) {
+          String d = String.format("%s%s", dir, "ProjLayers");
+          config.add(Option.PROJECTIONLAYERS, symlinkLayers(d, run
+              .getProjectionLayers()));
+        }
+      }
+      MaxEntRun actualRun = config.build();
       switch (actualRun.getType()) {
       case MODEL:
         builder = new ResultBuilder(run.getOption(Option.OUTPUTDIRECTORY));
@@ -269,5 +285,17 @@ public enum MaxEntService {
       argv[count++] = l.getPath();
     }
     return argv;
+  }
+
+  private static String symlinkLayers(String dir, List<Layer> layers)
+      throws IOException {
+    new File(dir).mkdir();
+    File d = new File(dir);
+    for (Layer l : layers) {
+      String link = String.format("ln -s %s %s/%s", l.getPath(), d.getPath(), l
+          .getFilename());
+      Runtime.getRuntime().exec(link);
+    }
+    return d.getPath();
   }
 }
