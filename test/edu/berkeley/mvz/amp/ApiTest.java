@@ -25,17 +25,17 @@ import junit.framework.Assert;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-import edu.berkeley.mvz.amp.MaxEntRun.Option;
-import edu.berkeley.mvz.amp.MaxEntRun.RunConfig;
-import edu.berkeley.mvz.amp.MaxEntRun.RunType;
-import edu.berkeley.mvz.amp.MaxEntService.AsyncRunCallback;
-import edu.berkeley.mvz.amp.MaxEntService.MaxEntException;
+import edu.berkeley.mvz.amp.MaxentRun.Option;
+import edu.berkeley.mvz.amp.MaxentRun.RunConfig;
+import edu.berkeley.mvz.amp.MaxentRun.RunType;
+import edu.berkeley.mvz.amp.MaxentService.AsyncRunCallback;
+import edu.berkeley.mvz.amp.MaxentService.MaxEntException;
 
 public class ApiTest {
   private static Logger log = Logger.getLogger(ApiTest.class);
 
   public static String path(String name) {
-    return MaxEntServiceTest.class.getResource(name).getPath();
+    return MaxentServiceTest.class.getResource(name).getPath();
   }
 
   @Test
@@ -43,21 +43,21 @@ public class ApiTest {
     List<Layer> layers = LayerTest.getTestLayers();
     List<Sample> samples = SampleTest.getTestSamples();
 
-    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
-    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
 
-    swdRun = MaxEntService.createSwdRun(10000, layers);
-    SamplesWithData background = MaxEntService.execute(swdRun)
+    swdRun = MaxentService.createSwdRun(10000, layers);
+    SamplesWithData background = MaxentService.execute(swdRun)
         .getSamplesWithData();
 
-    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
+    MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
         swd.toTempCsv())
         .add(Option.ENVIRONMENTALLAYERS, background.toTempCsv()).build();
 
-    MaxEntResults results = MaxEntService.execute(modelRun);
+    MaxentResults results = MaxentService.execute(modelRun);
     Assert.assertNotNull(results);
-    log.info(results.getOutputs());
+
   }
 
   @Test
@@ -65,26 +65,26 @@ public class ApiTest {
     List<Layer> layers = LayerTest.getTestLayers();
     List<Sample> samples = SampleTest.getTestSamples();
 
-    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
-    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
 
-    swdRun = MaxEntService.createSwdRun(10000, layers);
-    SamplesWithData background = MaxEntService.execute(swdRun)
+    swdRun = MaxentService.createSwdRun(10000, layers);
+    SamplesWithData background = MaxentService.execute(swdRun)
         .getSamplesWithData();
 
-    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
+    MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-async").add(
         Option.SAMPLESFILE, swd.toTempCsv()).add(Option.ENVIRONMENTALLAYERS,
         background.toTempCsv()).build();
 
-    MaxEntService.executeAsync(modelRun, new AsyncRunCallback() {
+    MaxentService.executeAsync(modelRun, new AsyncRunCallback() {
       public void onFailure(Throwable t) {
         Assert.fail(t.toString());
       }
 
-      public void onSuccess(MaxEntRun run, MaxEntResults results) {
+      public void onSuccess(MaxentRun run, MaxentResults results) {
         Assert.assertNotNull(results);
-        log.info("Done: " + results.getOutputs());
+
       }
     });
 
@@ -107,15 +107,30 @@ public class ApiTest {
   public void modelPictures() throws MaxEntException, IOException {
     List<Layer> layers = LayerTest.getTestLayers();
     List<Sample> samples = SampleTest.getTestSamples();
-    MaxEntRun swdRun = MaxEntService.createSwdRun(samples, layers);
-    SamplesWithData swd = MaxEntService.execute(swdRun).getSamplesWithData();
-    MaxEntRun modelRun = new RunConfig(RunType.MODEL).add(
-        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics").add(
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
+    MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
+        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics-reps").add(
         Option.SAMPLESFILE, swd.toTempCsv()).layers(layers).projectionLayers(
-        layers).add(Option.PICTURES).build();
-    MaxEntResults results = MaxEntService.execute(modelRun);
+        layers).add(Option.PICTURES).add(Option.REPLICATES, "3").add(
+        Option.RANDOMTESTPOINTS, "25").build();
+    MaxentResults results = MaxentService.execute(modelRun);
     Assert.assertNotNull(results);
-    log.info(results.getOutputs());
+
   }
 
+  @Test
+  public void modelPicturesNoReps() throws MaxEntException, IOException {
+    List<Layer> layers = LayerTest.getTestLayers();
+    List<Sample> samples = SampleTest.getTestSamples();
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
+    MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
+        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics-noreps").add(
+        Option.SAMPLESFILE, swd.toTempCsv()).layers(layers).projectionLayers(
+        layers).add(Option.PICTURES).build();
+    MaxentResults results = MaxentService.execute(modelRun);
+    Assert.assertNotNull(results);
+
+  }
 }

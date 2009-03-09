@@ -29,7 +29,7 @@ import java.util.Map.Entry;
  * prohibited.
  * 
  */
-class CellData {
+class Data {
 
   /**
    * Returns a new cell data instance given a cell and a mapping of layer
@@ -40,20 +40,20 @@ class CellData {
    * @throws NullPointerException if cell or values is null
    * @return cell data instance
    */
-  public static CellData newInstance(Cell cell, Map<Layer, Double> values) {
+  public static Data newInstance(Cell cell, Map<Layer, Double> values) {
     if (cell == null) {
       throw new NullPointerException("Cell was null");
     }
     if (values == null) {
       throw new NullPointerException("Values were null");
     }
-    return new CellData(cell, values);
+    return new Data(cell, values);
   }
 
   private final Map<Layer, Double> layerValues;
   private final Cell cell;
 
-  private CellData(Cell cell, Map<Layer, Double> values) {
+  private Data(Cell cell, Map<Layer, Double> values) {
     this.cell = cell;
     layerValues = new HashMap<Layer, Double>(values);
   }
@@ -66,10 +66,10 @@ class CellData {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CellData)) {
+    if (!(o instanceof Data)) {
       return false;
     }
-    CellData cd = (CellData) o;
+    Data cd = (Data) o;
     boolean b = layerValues.equals(cd.layerValues) && cell.equals(cd.cell);
     return b;
   }
