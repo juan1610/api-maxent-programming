@@ -15,6 +15,7 @@
  */
 package edu.berkeley.mvz.amp;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -146,8 +147,8 @@ public class SamplesWithData {
     return b;
   }
 
-  public Iterable<Entry<Sample, CellData>> getData() {
-    return new HashMap<Sample, CellData>(sampleData).entrySet();
+  public CellData getData(Sample sample) {
+    return sampleData.get(sample);
   }
 
   /**
@@ -158,7 +159,7 @@ public class SamplesWithData {
    * @return layer value associated with sample
    */
   public double getData(Sample sample, Layer Layer) {
-    return sampleData.get(sample).getCellValue(Layer);
+    return sampleData.get(sample).getValue(Layer);
   }
 
   /**
@@ -195,6 +196,12 @@ public class SamplesWithData {
    */
   public int size() {
     return sampleData.size();
+  }
+
+  public String toCsv() throws IOException {
+    String path = File.createTempFile("swd", ".csv").getPath();
+    toCsv(path);
+    return path;
   }
 
   /**
