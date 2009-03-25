@@ -103,7 +103,7 @@ public enum MaxentService {
     if (n < 1) {
       throw new IllegalArgumentException("n can't be negative");
     }
-    return new RunConfig(RunType.BACKGROUND_SWD).layers(layers).add(
+    return new RunConfig(RunType.BACKGROUND_SWD).environmentLayers(layers).add(
         Option.BACKGROUNDPOINTS, n + "").build();
   }
 
@@ -115,7 +115,8 @@ public enum MaxentService {
    * @return SWD run
    */
   public static MaxentRun createSwdRun(List<Sample> samples, List<Layer> layers) {
-    return new RunConfig(RunType.SWD).samples(samples).layers(layers).build();
+    return new RunConfig(RunType.SWD).samples(samples)
+        .environmentLayers(layers).build();
   }
 
   /**
@@ -184,10 +185,10 @@ public enum MaxentService {
       String dir = run.getOption(Option.OUTPUTDIRECTORY);
       if (dir != null) {
         dir = dir.endsWith(File.separator) ? dir : dir + File.separator;
-        if (!run.getLayers().isEmpty()) {
+        if (!run.getEnvironmentLayers().isEmpty()) {
           String d = String.format("%s%s", dir, "EnvLayers");
           config.add(Option.ENVIRONMENTALLAYERS, symlinkLayers(d, run
-              .getLayers()));
+              .getEnvironmentLayers()));
         }
         if (!run.getProjectionLayers().isEmpty()) {
           String d = String.format("%s%s", dir, "ProjLayers");
@@ -235,7 +236,7 @@ public enum MaxentService {
     }
     // Configures background SWD run:
     RunConfig options = new RunConfig(RunType.BACKGROUND_SWD);
-    String[] argv = backgroundSwdArgv(options, n, run.getLayers());
+    String[] argv = backgroundSwdArgv(options, n, run.getEnvironmentLayers());
     // Redirects standard output to SWD file:
     File swdout = File.createTempFile("background-swd", ".csv");
     FileOutputStream fos = new FileOutputStream(swdout);
@@ -246,7 +247,7 @@ public enum MaxentService {
     System.setOut(System.out);
     // Loads data from background SWD file that MaxEnt just created:
     final Map<String, Layer> layerNames = new HashMap<String, Layer>();
-    for (Layer l : run.getLayers()) {
+    for (Layer l : run.getEnvironmentLayers()) {
       layerNames.put(l.getFilename(), l);
     }
     return SamplesWithData.fromCsv(swdout.getPath(), new LayerProvider() {
@@ -257,10 +258,11 @@ public enum MaxentService {
   }
 
   private static SamplesWithData dispatchSwd(MaxentRun run) throws Exception {
+
     SamplesWithData swd = null;
     RunConfig options = new RunConfig(RunType.SWD);
     options.add(Option.SAMPLESFILE, Sample.toTempCsv(run.getSamples()));
-    String[] argv = swdArgv(options, run.getLayers());
+    String[] argv = swdArgv(options, run.getEnvironmentLayers());
     File swdout = File.createTempFile("swd", ".csv");
     FileOutputStream fos = new FileOutputStream(swdout);
     PrintStream ps = new PrintStream(fos);
@@ -271,7 +273,7 @@ public enum MaxentService {
     // Restores standard output:
     System.setOut(System.out);
     final Map<String, Layer> layerNames = new HashMap<String, Layer>();
-    for (Layer l : run.getLayers()) {
+    for (Layer l : run.getEnvironmentLayers()) {
       layerNames.put(l.getFilename(), l);
     }
     // Loads SWD file that MaxEnt just created:
@@ -287,6 +289,16 @@ public enum MaxentService {
     String samplesPath = cb.build().getOption(Option.SAMPLESFILE);
     String[] argv = new String[layers.size() + 1];
     argv[0] = samplesPath;
+    int count = 1;
+    for (Layer l : layers) {
+      argv[count++] = l.getPath();
+    }
+    return argv;
+  }
+
+  private static String[] swdArgv(String samplesFile, List<Layer> layers) {
+    String[] argv = new String[layers.size() + 1];
+    argv[0] = samplesFile;
     int count = 1;
     for (Layer l : layers) {
       argv[count++] = l.getPath();

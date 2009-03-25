@@ -21,6 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +87,17 @@ public class SamplesWithData {
       }
       return new SamplesWithData(data);
     }
+
+  }
+
+  /**
+   * This interface can be used to filter
+   * 
+   */
+  public static interface SwdFilter {
+    public boolean acceptLayer(Layer layer);
+
+    public boolean acceptSample(Sample sample);
   }
 
   /**
@@ -113,10 +125,16 @@ public class SamplesWithData {
     Sample s;
     Layer l;
     double lat, lng, value;
+    String name = null;
     while ((line = reader.readNext()) != null) {
       lng = Double.parseDouble(line[1]);
       lat = Double.parseDouble(line[2]);
-      s = Sample.newInstance(line[0], 0, LatLng.newInstance(lat, lng));
+      if (line[0].contains("_")) {
+        name = line[0].split("_")[0] + " " + line[0].split("_")[1];
+      } else {
+        name = line[0];
+      }
+      s = Sample.newInstance(name, 0, LatLng.newInstance(lat, lng));
       for (Integer i : map.keySet()) {
         l = provider.getLayerByFilename(map.get(i));
         value = Double.parseDouble(line[i]);
@@ -129,6 +147,7 @@ public class SamplesWithData {
   }
 
   private final Map<Sample, Data> sampleData;
+  private final HashSet<String> sampleNames = new HashSet<String>();
 
   private SamplesWithData(Map<Sample, Data> sampleData) {
     this.sampleData = sampleData;
@@ -173,6 +192,15 @@ public class SamplesWithData {
         .getLayers());
   }
 
+  public Set<String> getSampleNames() {
+    if (sampleNames.isEmpty()) {
+      for (Sample s : sampleData.keySet()) {
+        sampleNames.add(s.getName());
+      }
+    }
+    return sampleNames;
+  }
+
   /**
    * Returns the list of samples encapsulated by these samples with CellData.
    * 
@@ -189,6 +217,7 @@ public class SamplesWithData {
     result = 31 * result + sampleData.hashCode();
     return result;
   }
+
   /**
    * Returns the size (number of unique samples) of this object.
    * 
@@ -196,12 +225,6 @@ public class SamplesWithData {
    */
   public int size() {
     return sampleData.size();
-  }
-
-  public String toTempCsv() throws IOException {
-    String path = File.createTempFile("swd", ".csv").getPath();
-    toCsv(path);
-    return path;
   }
 
   /**
@@ -241,9 +264,57 @@ public class SamplesWithData {
     writer.close();
   }
 
+  public void toCsv(String path, SwdFilter filter) throws IOException {
+    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
+
+    // Writes the header that includes the layer filenames:
+    String[] header = new String[3 + getLayers().size()];
+    header[0] = "species";
+    header[1] = "dd long";
+    header[2] = "dd lat";
+    int count = 3;
+    for (Layer l : getLayers()) {
+      // MaxEnt header doesn't include file extension:
+      String[] name = l.getFilename().split(".asc");
+      if (filter.acceptLayer(l)) {
+        header[count++] = name[0];
+      }
+    }
+    writer.writeNext(header);
+
+    String[] line = null;
+    LatLng p = null;
+    for (Sample s : getSamples()) {
+      if (!filter.acceptSample(s)) {
+        continue;
+      }
+      p = s.getPoint();
+      String CellData = String.format("%s,%f,%f", s.getName(),
+          p.getLongitude(), p.getLatitude());
+      for (Layer l : getLayers()) {
+        CellData += "," + getData(s, l);
+      }
+      line = CellData.split(",");
+      writer.writeNext(line);
+    }
+    writer.close();
+  }
+
   @Override
   public String toString() {
     return sampleData.toString();
+  }
+
+  public String toTempCsv() throws IOException {
+    String path = File.createTempFile("swd", ".csv").getPath();
+    toCsv(path);
+    return path;
+  }
+
+  public String toTempCsv(SwdFilter filter) throws IOException {
+    String path = File.createTempFile("swd", ".csv").getPath();
+    toCsv(path, filter);
+    return path;
   }
 
 }
