@@ -127,7 +127,7 @@ public class MaxentRun {
     private Map<Option, String> commandLine;
     private final RunType runType;
     private List<Sample> samples;
-    private List<Layer> layers;
+    private List<Layer> environmentLayers;
     private List<Layer> backgroundLayers;
     private List<Layer> projectionLayers;
 
@@ -138,7 +138,7 @@ public class MaxentRun {
      */
     public RunConfig(MaxentRun run) {
       this(run.type);
-      layers = run.layers;
+      environmentLayers = run.layers;
       backgroundLayers = run.backgroundLayers;
       projectionLayers = run.projectionLayers;
       samples = run.samples;
@@ -224,8 +224,8 @@ public class MaxentRun {
      * @param layers list of layers
      * @return the configuration
      */
-    public RunConfig layers(List<Layer> layers) {
-      this.layers = new ArrayList<Layer>(layers);
+    public RunConfig environmentLayers(List<Layer> layers) {
+      this.environmentLayers = new ArrayList<Layer>(layers);
       return this;
     }
 
@@ -279,16 +279,16 @@ public class MaxentRun {
   private final ArrayList<Layer> projectionLayers;
 
   private MaxentRun(RunConfig options) {
-    this.type = options.runType;
-    this.commandLine = options.commandLine == null ? new HashMap<Option, String>()
+    type = options.runType;
+    commandLine = options.commandLine == null ? new HashMap<Option, String>()
         : new HashMap<Option, String>(options.commandLine);
-    this.samples = options.samples == null ? new ArrayList<Sample>()
+    samples = options.samples == null ? new ArrayList<Sample>()
         : new ArrayList<Sample>(options.samples);
-    this.layers = options.layers == null ? new ArrayList<Layer>()
-        : new ArrayList<Layer>(options.layers);
-    this.backgroundLayers = options.backgroundLayers == null ? new ArrayList<Layer>()
+    layers = options.environmentLayers == null ? new ArrayList<Layer>()
+        : new ArrayList<Layer>(options.environmentLayers);
+    backgroundLayers = options.backgroundLayers == null ? new ArrayList<Layer>()
         : new ArrayList<Layer>(options.backgroundLayers);
-    this.projectionLayers = options.projectionLayers == null ? new ArrayList<Layer>()
+    projectionLayers = options.projectionLayers == null ? new ArrayList<Layer>()
         : new ArrayList<Layer>(options.projectionLayers);
   }
 
@@ -322,7 +322,7 @@ public class MaxentRun {
   /**
    * @return the layers
    */
-  public ArrayList<Layer> getLayers() {
+  public ArrayList<Layer> getEnvironmentLayers() {
     return layers;
   }
 
