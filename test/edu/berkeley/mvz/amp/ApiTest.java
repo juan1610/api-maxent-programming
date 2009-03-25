@@ -25,11 +25,13 @@ import junit.framework.Assert;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
+import edu.berkeley.mvz.amp.Layer.LayerType;
 import edu.berkeley.mvz.amp.MaxentRun.Option;
 import edu.berkeley.mvz.amp.MaxentRun.RunConfig;
 import edu.berkeley.mvz.amp.MaxentRun.RunType;
 import edu.berkeley.mvz.amp.MaxentService.AsyncRunCallback;
 import edu.berkeley.mvz.amp.MaxentService.MaxEntException;
+import edu.berkeley.mvz.amp.SamplesWithData.SwdFilter;
 
 public class ApiTest {
   private static Logger log = Logger.getLogger(ApiTest.class);
@@ -50,13 +52,26 @@ public class ApiTest {
     SamplesWithData background = MaxentService.execute(swdRun)
         .getSamplesWithData();
 
-    MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
-        Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
-        swd.toTempCsv())
-        .add(Option.ENVIRONMENTALLAYERS, background.toTempCsv()).build();
+    SwdFilter filter;
+    for (final String name : swd.getSampleNames()) {
+      filter = new SwdFilter() {
+        public boolean acceptLayer(Layer layer) {
+          return ((layer.getType() == LayerType.CLIMATE) && (layer.getYear() < 1975))
+              || ((layer.getType() == LayerType.FOREST) && (layer.getYear() < 1969));
+        }
 
-    MaxentResults results = MaxentService.execute(modelRun);
-    Assert.assertNotNull(results);
+        public boolean acceptSample(Sample sample) {
+          return name.equals(sample.getName());
+        }
+      };
+      MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
+          Option.OUTPUTDIRECTORY, "/Users/eighty/tmp").add(Option.SAMPLESFILE,
+          swd.toTempCsv()).add(Option.ENVIRONMENTALLAYERS,
+          background.toTempCsv(filter)).build();
+      MaxentResults results = MaxentService.execute(modelRun);
+      Assert.assertNotNull(results);
+
+    }
 
   }
 
@@ -111,9 +126,9 @@ public class ApiTest {
     SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
     MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics-reps").add(
-        Option.SAMPLESFILE, swd.toTempCsv()).layers(layers).projectionLayers(
-        layers).add(Option.PICTURES).add(Option.REPLICATES, "3").add(
-        Option.RANDOMTESTPOINTS, "25").build();
+        Option.SAMPLESFILE, swd.toTempCsv()).environmentLayers(layers)
+        .projectionLayers(layers).add(Option.PICTURES).add(Option.REPLICATES,
+            "3").add(Option.RANDOMTESTPOINTS, "25").build();
     MaxentResults results = MaxentService.execute(modelRun);
     Assert.assertNotNull(results);
 
@@ -127,8 +142,8 @@ public class ApiTest {
     SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
     MaxentRun modelRun = new RunConfig(RunType.MODEL).add(
         Option.OUTPUTDIRECTORY, "/Users/eighty/tmp-pics-noreps").add(
-        Option.SAMPLESFILE, swd.toTempCsv()).layers(layers).projectionLayers(
-        layers).add(Option.PICTURES).build();
+        Option.SAMPLESFILE, swd.toTempCsv()).environmentLayers(layers)
+        .projectionLayers(layers).add(Option.PICTURES).build();
     MaxentResults results = MaxentService.execute(modelRun);
     Assert.assertNotNull(results);
 
