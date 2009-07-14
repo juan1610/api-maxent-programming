@@ -20,10 +20,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -94,10 +96,9 @@ public class SamplesWithData {
    * This interface can be used to filter
    * 
    */
-  public static interface SwdFilter {
-    public boolean acceptLayer(Layer layer);
-
-    public boolean acceptSample(Sample sample);
+  public static interface SwdSpec {
+    public Layer getLayer(String layerName, Sample sample);
+    public List<String> getLayerNames();
   }
 
   /**
@@ -125,16 +126,23 @@ public class SamplesWithData {
     Sample s;
     Layer l;
     double lat, lng, value;
-    String name = null;
+    String name = null, nameYear;
+    int year;
     while ((line = reader.readNext()) != null) {
       lng = Double.parseDouble(line[1]);
       lat = Double.parseDouble(line[2]);
       if (line[0].contains("_")) {
-        name = line[0].split("_")[0] + " " + line[0].split("_")[1];
+        nameYear = line[0].split("_")[0] + " " + line[0].split("_")[1];
       } else {
-        name = line[0];
+        nameYear = line[0];
       }
-      s = Sample.newInstance(name, 0, LatLng.newInstance(lat, lng));
+      name = nameYear.split("-")[0];
+      if (nameYear.contains("-")) {
+        year = Integer.parseInt(nameYear.split("-")[1]);
+        s = Sample.newInstance(name, year, LatLng.newInstance(lat, lng));
+      } else {
+        s = Sample.newInstance(name, -1, LatLng.newInstance(lat, lng));
+      }
       for (Integer i : map.keySet()) {
         l = provider.getLayerByFilename(map.get(i));
         value = Double.parseDouble(line[i]);
@@ -146,11 +154,21 @@ public class SamplesWithData {
     return swd;
   }
 
+  private static int randomSampleYear(List<Layer> layers) {
+    int r = Math.abs(new Random().nextInt()) % (layers.size() - 1);
+    return layers.get(r).getYear();
+  }
+
   private final Map<Sample, Data> sampleData;
+
   private final HashSet<String> sampleNames = new HashSet<String>();
 
   private SamplesWithData(Map<Sample, Data> sampleData) {
     this.sampleData = sampleData;
+  }
+
+  public void bind(Sample sample, String layerId, Layer layer) {
+
   }
 
   @Override
@@ -228,13 +246,50 @@ public class SamplesWithData {
   }
 
   /**
-   * Writes samples with CellData to disk in the MaxEnt SWD format.
+   * Writes SWD to a temporary CSV file without appending sample year data and
+   * returns the path to the file.
+   * 
+   * @return
+   * @throws IOException
+   */
+  public String toCsv() throws IOException {
+    String path = File.createTempFile("swd", ".csv").getPath();
+    toCsv(path, false);
+    return path;
+  }
+
+  /**
+   * Writes SWD to a temporary CSV file and returns the file path.
+   * 
+   * @param appendYear
+   * @return
+   * @throws IOException
+   */
+  public String toCsv(boolean appendYear) throws IOException {
+    String path = File.createTempFile("swd", ".csv").getPath();
+    toCsv(path, appendYear);
+    return path;
+  }
+
+  /**
+   * Writes SWD to a CSV at path without appending sample year data.
    * 
    * @param path path to write SWD file
    * @throws IOException problems writing to path
    */
   public void toCsv(String path) throws IOException {
-    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
+    toCsv(path, false);
+  }
+
+  /**
+   * Writes samples with CellData to disk in the MaxEnt SWD format.
+   * 
+   * @param path path to write SWD file
+   * @throws IOException problems writing to path
+   */
+  public void toCsv(String path, boolean appendYear) throws IOException {
+    CSVWriter writer = new CSVWriter(new FileWriter(path), ',',
+        CSVWriter.NO_QUOTE_CHARACTER);
 
     // Writes the header that includes the layer filenames:
     String[] header = new String[3 + getLayers().size()];
@@ -246,6 +301,7 @@ public class SamplesWithData {
       // MaxEnt header doesn't include file extension:
       String[] name = l.getFilename().split(".asc");
       header[count++] = name[0];
+      // header[count++] = l.getName();
     }
     writer.writeNext(header);
 
@@ -253,49 +309,59 @@ public class SamplesWithData {
     LatLng p = null;
     for (Sample s : getSamples()) {
       p = s.getPoint();
-      String CellData = String.format("%s,%f,%f", s.getName(),
-          p.getLongitude(), p.getLatitude());
-      for (Layer l : getLayers()) {
-        CellData += "," + getData(s, l);
+      String cellData;
+      if (appendYear) {
+        cellData = String.format("%s-%d,%f,%f", s.getName(), s.getYear(), p
+            .getLongitude(), p.getLatitude());
+      } else {
+        cellData = String.format("%s,%f,%f", s.getName(), p.getLongitude(), p
+            .getLatitude());
       }
-      line = CellData.split(",");
+
+      for (Layer l : getLayers()) {
+        cellData += "," + getData(s, l);
+      }
+      line = cellData.split(",");
       writer.writeNext(line);
     }
     writer.close();
   }
 
-  public void toCsv(String path, SwdFilter filter) throws IOException {
-    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
+  public void toCsv(String path, SwdSpec spec) throws IOException {
+    toCsv(path, spec, false);
+  }
 
-    // Writes the header that includes the layer filenames:
-    String[] header = new String[3 + getLayers().size()];
-    header[0] = "species";
-    header[1] = "dd long";
-    header[2] = "dd lat";
-    int count = 3;
-    for (Layer l : getLayers()) {
-      // MaxEnt header doesn't include file extension:
-      String[] name = l.getFilename().split(".asc");
-      if (filter.acceptLayer(l)) {
-        header[count++] = name[0];
-      }
+  public void toCsv(String path, SwdSpec filter, boolean appendYear)
+      throws IOException {
+    CSVWriter writer = new CSVWriter(new FileWriter(path), ',',
+        CSVWriter.NO_QUOTE_CHARACTER);
+    StringBuilder header = new StringBuilder();
+    header.append("species,dd long,dd lat");
+    List<String> layerNames = filter.getLayerNames();
+    Collections.sort(layerNames);
+    for (String name : layerNames) {
+      header.append(","
+          + (name.endsWith(".asc") ? name.replace(".asc", "") : name));
     }
-    writer.writeNext(header);
-
-    String[] line = null;
-    LatLng p = null;
+    writer.writeNext(header.toString().split(","));
+    StringBuilder csv = new StringBuilder();
+    String sName;
+    double lat, lng;
     for (Sample s : getSamples()) {
-      if (!filter.acceptSample(s)) {
-        continue;
+      csv = new StringBuilder();
+      sName = s.getName();
+      lat = s.getPoint().getLatitude();
+      lng = s.getPoint().getLongitude();
+      csv.append(appendYear ? String.format("%s-%d,%f,%f", sName, s.getYear(),
+          lat, lng) : String.format("%s,%f,%f", sName, lat, lng));
+      for (String name : layerNames) {
+        Layer l = filter.getLayer(name, s);
+        if (l == null) {
+          continue;
+        }
+        csv.append("," + getData(s, l));
       }
-      p = s.getPoint();
-      String CellData = String.format("%s,%f,%f", s.getName(),
-          p.getLongitude(), p.getLatitude());
-      for (Layer l : getLayers()) {
-        CellData += "," + getData(s, l);
-      }
-      line = CellData.split(",");
-      writer.writeNext(line);
+      writer.writeNext(csv.toString().split(","));
     }
     writer.close();
   }
@@ -305,15 +371,16 @@ public class SamplesWithData {
     return sampleData.toString();
   }
 
-  public String toTempCsv() throws IOException {
+  public String toTempCsv(SwdSpec filter) throws IOException {
     String path = File.createTempFile("swd", ".csv").getPath();
-    toCsv(path);
+    toCsv(path, filter, false);
     return path;
   }
 
-  public String toTempCsv(SwdFilter filter) throws IOException {
+  public String toTempCsv(SwdSpec filter, boolean appendYear)
+      throws IOException {
     String path = File.createTempFile("swd", ".csv").getPath();
-    toCsv(path, filter);
+    toCsv(path, filter, appendYear);
     return path;
   }
 

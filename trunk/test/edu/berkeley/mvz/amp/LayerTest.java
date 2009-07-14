@@ -36,14 +36,15 @@ import edu.berkeley.mvz.amp.Layer.LayerType;
 public class LayerTest {
   private final static Map<String, Layer> layerNames = new HashMap<String, Layer>();
 
-  private static Logger log = Logger.getLogger(LayerTest.class);
-
   private static ArrayList<Layer> layers;
+
+  private static Logger log = Logger.getLogger(LayerTest.class);
 
   static {
     layers = new ArrayList<Layer>();
-    layers.add(Layer.newInstance(CLIMATE, "foo", 0, path("cld6190_ann.asc")));
-    layers.add(Layer.newInstance(CLIMATE, "bar", 0, path("h_dem.asc")));
+    layers
+        .add(Layer.newInstance(CLIMATE, "foo", 1960, path("cld6190_ann.asc")));
+    layers.add(Layer.newInstance(CLIMATE, "bar", 2008, path("h_dem.asc")));
     for (Layer l : layers) {
       layerNames.put(l.getFilename(), l);
     }

@@ -31,7 +31,12 @@ public class SampleTest {
   public static List<Sample> getTestSamples() throws IOException {
     String path = SamplesWithDataTest.class.getResource("samples.csv")
         .getPath();
-    return Sample.fromCsv(path, 2009);
+    return Sample.fromCsv(path);
+  }
+
+  public static List<Sample> getTestSamples(String file) throws IOException {
+    String path = SamplesWithDataTest.class.getResource(file).getPath();
+    return Sample.fromCsv(path);
   }
 
   private static boolean throwsException(String name, LatLng point) {
@@ -51,7 +56,6 @@ public class SampleTest {
     Sample s1 = Sample.newInstance("foo", 0, point);
     Sample s2 = Sample.newInstance("foo", 0, point);
     Assert.assertEquals(s1, s2);
-
     Map<Sample, String> map1 = new HashMap<Sample, String>();
     map1.put(s1, "point");
     Map<Sample, String> map2 = new HashMap<Sample, String>();
@@ -71,5 +75,13 @@ public class SampleTest {
     Assert.assertEquals("sample", s.getName());
     Assert.assertEquals(2009, s.getYear());
     Assert.assertEquals(LatLng.newInstance(0, 0), s.getPoint());
+  }
+
+  @Test
+  public void toCsv() throws IOException {
+    List<Sample> samples1 = getTestSamples();
+    String path = Sample.toCsv(samples1);
+    List<Sample> samples2 = Sample.fromCsv(path);
+    Assert.assertEquals(samples1, samples2);
   }
 }

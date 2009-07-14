@@ -16,9 +16,14 @@
 package edu.berkeley.mvz.amp;
 
 import java.io.IOException;
+import java.util.List;
+
+import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
+
+import edu.berkeley.mvz.amp.MaxentService.MaxEntException;
 
 /**
  * Unit tests for {@link MaxentService}.
@@ -33,22 +38,14 @@ public class MaxentServiceTest {
   }
 
   @Test
-  public void backgroundSwd() throws IOException {
-    // List<Layer> layers = LayerTest.getTestLayers();
-    // int n = 10000;
-    // SamplesWithData bswd = MaxEntService.backgroundSwd(n, layers);
-    // Assert.assertEquals(n, bswd.size());
-  }
-  @Test
-  public void swd() {
-    // try {
-    // List<Sample> samples = SampleTest.getTestSamples();
-    // List<Layer> layers = LayerTest.getTestLayers();
-    // SamplesWithData swd = MaxEntService.swd(samples, layers);
-    // Assert.assertNotNull(swd);
-    // Assert.assertTrue(swd.size() > 0 && swd.size() <= samples.size());
-    // } catch (IOException e) {
-    // e.printStackTrace();
-    // }
+  public void swd() throws MaxEntException, IOException {
+    List<Sample> samples = SampleTest.getTestSamples();
+    Assert.assertEquals(10, samples.size());
+    List<Layer> layers = LayerTest.getTestLayers();
+    Assert.assertEquals(2, layers.size());
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
+    Assert.assertNotNull(swd);
+    Assert.assertTrue(swd.size() == samples.size());
   }
 }
