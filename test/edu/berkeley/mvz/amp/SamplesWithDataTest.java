@@ -15,6 +15,7 @@
  */
 package edu.berkeley.mvz.amp;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,8 @@ import org.apache.log4j.Logger;
 import org.junit.Test;
 
 import edu.berkeley.mvz.amp.Layer.LayerType;
+import edu.berkeley.mvz.amp.MaxentService.MaxEntException;
+import edu.berkeley.mvz.amp.SamplesWithData.SwdSpec;
 
 /**
  * Unit tests for {@link SamplesWithData}.
@@ -32,23 +35,12 @@ import edu.berkeley.mvz.amp.Layer.LayerType;
 public class SamplesWithDataTest {
   private static Logger log = Logger.getLogger(SamplesWithDataTest.class);
 
-  // public static SamplesWithData getTestSwd() throws IOException {
-  // List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
-  // List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
-  // .values());
-  // return MaxEntService.swd(samples, layers);
-  // }
-
-  private static String path(String name) {
-    return MaxentServiceTest.class.getResource(name).getPath();
-  }
-
   @Test
   public void builder() {
     String path = SamplesWithDataTest.class.getResource("samples.csv")
         .getPath();
     try {
-      Sample.fromCsv(path, 2009);
+      Sample.fromCsv(path);
     } catch (Exception e) {
       log.error(e);
       Assert.fail();
@@ -60,45 +52,43 @@ public class SamplesWithDataTest {
         lpath));
   }
 
-  // @Test
-  // public void equals() throws IOException {
-  // SamplesWithData swd = getTestSwd();
-  // SamplesWithData swd2 = SamplesWithData.fromCsv(path("maxent-swd.txt"),
-  // new LayerProvider() {
-  // public Layer getLayerByFilename(String filename) {
-  // return LayerTest.getTestLayerMap().get(filename);
-  // }
-  // });
-  // Assert.assertEquals(swd, swd2);
-  // }
-  //
-  // @Test
-  // public void toCsv() throws IOException {
-  // List<Sample> samples = Sample.fromCsv(path("samples.csv"), 2009);
-  // List<Layer> layers = new ArrayList<Layer>(LayerTest.getTestLayerMap()
-  // .values());
-  // SamplesWithData swd = MaxEntService.swd(samples, layers);
-  // Assert.assertNotNull(swd.getSamples());
-  // Assert.assertFalse(swd.getSamples().isEmpty());
-  // Assert.assertNotNull(swd.getLayers());
-  // Assert.assertFalse(swd.getLayers().isEmpty());
-  //
-  // // Writes swd to csv:
-  // String path = File.createTempFile("toCsv", ".csv").getPath();
-  // swd.toCsv(path);
-  // log.info("wrote SWD to " + path);
-  //
-  // // Reads swd from csv:
-  // SamplesWithData swd2 = SamplesWithData.fromCsv(path, new LayerProvider() {
-  // public Layer getLayerByFilename(String filename) {
-  // return LayerTest.getTestLayerMap().get(filename);
-  // }
-  // });
-  // log.info("loaded SWD to " + path);
-  //
-  // // Boths swds should be equal.
-  // log.info("swd1: " + swd);
-  // log.info("swd2: " + swd2);
-  // Assert.assertEquals(swd, swd2);
-  // }
+  @Test
+  public void csvFile() throws IOException, MaxEntException {
+    List<Sample> samples = SampleTest.getTestSamples();
+    final List<Layer> layers = LayerTest.getTestLayers();
+    MaxentRun swdRun = MaxentService.createSwdRun(samples, layers);
+    SamplesWithData swd = MaxentService.execute(swdRun).getSamplesWithData();
+    String path = swd.toTempCsv(new SwdSpec() {
+      private final String[] names = { "cld", "h_dem" };
+
+      public Layer getLayer(String layerName, Sample sample) {
+        for (Layer layer : layers) {
+          if (!layer.getType().equals(LayerType.CLIMATE)) {
+            continue;
+          }
+          if (!layer.getFilename().contains(layerName)) {
+            continue;
+          }
+          return layer;
+        }
+        return null;
+      }
+
+      public List<String> getLayerNames() {
+        List<String> result = new ArrayList<String>();
+        for (String name : names) {
+          result.add(name);
+        }
+        return result;
+      }
+
+    });
+    log.info(path);
+  }
+
+  @Test
+  public void toCsvWithSpec() {
+
+  }
+
 }

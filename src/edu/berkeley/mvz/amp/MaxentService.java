@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import density.Getval;
 import density.MaxEnt;
 import density.tools.RandomSample;
 import edu.berkeley.mvz.amp.Layer.LayerProvider;
+import edu.berkeley.mvz.amp.Layer.ProjectionSpec;
 import edu.berkeley.mvz.amp.MaxentResults.ResultBuilder;
 import edu.berkeley.mvz.amp.MaxentRun.Option;
 import edu.berkeley.mvz.amp.MaxentRun.RunConfig;
@@ -182,18 +184,68 @@ public enum MaxentService {
     try {
       RunConfig config = new RunConfig(run).add(Option.AUTORUN).add(
           Option.INVISIBLE);
+
+      // Sets up output directories:
       String dir = run.getOption(Option.OUTPUTDIRECTORY);
       if (dir != null) {
         dir = dir.endsWith(File.separator) ? dir : dir + File.separator;
-        if (!run.getEnvironmentLayers().isEmpty()) {
-          String d = String.format("%s%s", dir, "EnvLayers");
-          config.add(Option.ENVIRONMENTALLAYERS, symlinkLayers(d, run
-              .getEnvironmentLayers()));
+        File root = new File(dir);
+        if (!root.exists()) {
+          root.mkdirs();
         }
-        if (!run.getProjectionLayers().isEmpty()) {
+        String edir = String.format("%s%s", dir, "EnvLayers");
+        String pdir = String.format("%s%s", dir, "ProjLayers");
+        File eDir = new File(edir);
+        if (eDir.exists()) {
+          for (File f : eDir.listFiles()) {
+            f.delete();
+          }
+          eDir.delete();
+        }
+        eDir.mkdir();
+        File pDir = new File(pdir);
+        if (pDir.exists()) {
+          for (File f : pDir.listFiles()) {
+            f.delete();
+          }
+          pDir.delete();
+        }
+        pDir.mkdir();
+
+        // Creates symlinks for projection layers:
+        if (!run.getProjectionSpecs().isEmpty()) {
+          for (ProjectionSpec spec : run.getProjectionSpecs()) {
+            // Creates environmental layer symlink:
+            File d = new File(edir);
+            if (spec.getEnvrionmentalLayer() != null) {
+              String path = spec.getEnvrionmentalLayer().getPath();
+              String link = String.format("ln -s %s %s/%s", path, d.getPath(),
+                  spec.getLayerName());
+              Runtime.getRuntime().exec(link);
+            }
+            // Creates projection layer symlink:
+            d = new File(pdir);
+            if (spec.getProjectionLayer() != null) {
+              String path = spec.getProjectionLayer().getPath();
+              String link = String.format("ln -s %s %s/%s", path, d.getPath(),
+                  spec.getLayerName());
+              Runtime.getRuntime().exec(link);
+            }
+          }
           String d = String.format("%s%s", dir, "ProjLayers");
           config.add(Option.PROJECTIONLAYERS, symlinkLayers(d, run
               .getProjectionLayers()));
+        } else {
+          if (!run.getEnvironmentLayers().isEmpty()) {
+            String d = String.format("%s%s", dir, "EnvLayers");
+            config.add(Option.ENVIRONMENTALLAYERS, symlinkLayers(d, run
+                .getEnvironmentLayers()));
+          }
+          if (!run.getProjectionLayers().isEmpty()) {
+            String d = String.format("%s%s", dir, "ProjLayers");
+            config.add(Option.PROJECTIONLAYERS, symlinkLayers(d, run
+                .getProjectionLayers()));
+          }
         }
       }
       MaxentRun actualRun = config.build();
@@ -205,7 +257,13 @@ public enum MaxentService {
           int runCount = Integer.parseInt(replicates);
           builder.runCount(runCount);
         }
-        MaxEnt.main(actualRun.asArgv());
+        String[] argv = actualRun.asArgv();
+        String sa = "";
+        for (String s : argv) {
+          sa += " " + s;
+        }
+        log.info(sa);
+        MaxEnt.main(argv);
         break;
       case BACKGROUND_SWD:
         builder = new ResultBuilder();
@@ -223,7 +281,6 @@ public enum MaxentService {
       throw new MaxEntException(e);
     }
   }
-
   private static SamplesWithData dispatchBackgroundSwd(MaxentRun run)
       throws MaxEntException, IOException {
     String value = run.getOption(Option.BACKGROUNDPOINTS);
@@ -261,7 +318,7 @@ public enum MaxentService {
 
     SamplesWithData swd = null;
     RunConfig options = new RunConfig(RunType.SWD);
-    options.add(Option.SAMPLESFILE, Sample.toTempCsv(run.getSamples()));
+    options.add(Option.SAMPLESFILE, Sample.toCsv(run.getSamples(), true));
     String[] argv = swdArgv(options, run.getEnvironmentLayers());
     File swdout = File.createTempFile("swd", ".csv");
     FileOutputStream fos = new FileOutputStream(swdout);
@@ -306,13 +363,20 @@ public enum MaxentService {
     return argv;
   }
 
+  private static String symlinkLayers(String dir, Layer layer)
+      throws IOException {
+    List<Layer> layers = new ArrayList<Layer>();
+    layers.add(layer);
+    return symlinkLayers(dir, layers);
+  }
+
   private static String symlinkLayers(String dir, List<Layer> layers)
       throws IOException {
     new File(dir).mkdir();
     File d = new File(dir);
     for (Layer l : layers) {
       String link = String.format("ln -s %s %s/%s", l.getPath(), d.getPath(), l
-          .getFilename());
+          .getName());
       Runtime.getRuntime().exec(link);
     }
     return d.getPath();

@@ -29,7 +29,7 @@ import java.io.StreamTokenizer;
  * 
  * This class is immutable and it is not designed for inheritance.
  */
-public class Layer {
+public class Layer implements Comparable<Layer> {
 
   /**
    * This interface can be used by clients who need a layer identified only by
@@ -52,16 +52,22 @@ public class Layer {
    * 
    */
   public static enum LayerType {
-    CLIMATE, FOREST, GEOLOGY, SOIL, MARINE
+    CLIMATE, FOREST, GEOLOGY, MARINE, SOIL
+  }
+
+  public static interface ProjectionSpec {
+    public Layer getEnvrionmentalLayer();
+    public String getLayerName();
+    public Layer getProjectionLayer();
   }
 
   private static class AsciiHeader {
-    Double xllcorner = null;
-    Double yllcorner = null;
     Double cellSize = null;
+    Integer nCols = null;
     Integer noDataValue = null;
     Integer nRows = null;
-    Integer nCols = null;
+    Double xllcorner = null;
+    Double yllcorner = null;
   }
 
   private static class Extent {
@@ -81,7 +87,7 @@ public class Layer {
   private static class Parser {
 
     private static enum State {
-      HEADER_KEY, HEADER_VAL, DATA_INIT, DATA_VAL, DONE
+      DATA_INIT, DATA_VAL, DONE, HEADER_KEY, HEADER_VAL
     }
 
     static AsciiHeader parse(String filePath) throws IOException {
@@ -161,19 +167,19 @@ public class Layer {
     return new Layer(type, name, year, path);
   }
 
+  private final Extent extent;
+
   private final String filename;
 
-  private final int nRows;
-
+  private final String name;
   private final int nCols;
+  private final int noData;
+  private final int nRows;
+  private final String path;
+  private final double res;
+  private final LayerType type;
 
   private final int year;
-  private final double res;
-  private final int noData;
-  private final String path;
-  private final String name;
-  private final LayerType type;
-  private final Extent extent;
 
   private Layer(LayerType type, String name, int year, String path) {
     this.type = type;
@@ -257,6 +263,10 @@ public class Layer {
     }
 
     return Cell.newInstance(row, col);
+  }
+
+  public int compareTo(Layer o) {
+    return filename.compareTo(o.filename);
   }
 
   /**
@@ -374,7 +384,7 @@ public class Layer {
    */
   public LatLng getSePoint() {
     return extent.se;
-  }
+  };
 
   /**
    * Returns the the south west point of the layer extent.
@@ -383,7 +393,7 @@ public class Layer {
    */
   public LatLng getSwPoint() {
     return extent.sw;
-  };
+  }
 
   /**
    * Returns the layer type.

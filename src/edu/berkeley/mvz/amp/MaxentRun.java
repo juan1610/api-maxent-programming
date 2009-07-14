@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import edu.berkeley.mvz.amp.Layer.ProjectionSpec;
+
 /**
  * This class can be used to configure a Maxent run by adding command line
  * options, samples, samples with data, environmental layers, and projection
@@ -37,11 +39,12 @@ public class MaxentRun {
   public static enum Option {
     APPLYTHRESHOLDRULE("applythresholdrule", "", "For each output grid, use the <rule> threshold rule to additionally make a thresholded version of the output grid. here <rule> should exactly match one of the rules in the description column of the threshold table in the .html outputs (for example, minimum training presence).."),
     AUTORUN("autorun", "-a", "Start immediately, without waiting for run button to be pushed."),
-    BETAMULTIPLIER("betamultiplier", "-b", "Set the regularization multiplier (default 1.0)."),
+    BACKGROUNDPOINTS("n", "n", "Number of background points."),
     BETA_CATEGORICAL("beta_categorical", "", "Override default beta for categorical features."),
     BETA_HINGE("beta_hinge", "", "Override default beta for linear, quadratic and product features."),
     BETA_LQP("beta_lqp", "", "Override default beta for linear, quadratic and product features."),
     BETA_THRESHOLD("beta_threshold", "", "Override default beta for threshold features."),
+    BETAMULTIPLIER("betamultiplier", "-b", "Set the regularization multiplier (default 1.0)."),
     CONVERGENCETHRESHOLD("convergencethreshold", "-c", "Set the convergence threshold (default 1.0e-5)."),
     CUMULATIVE("cumulative", "-C", "Use cumulative rather than logistic output format."),
     DONTADDSAMPLESTOFEATURES("dontaddsamplestofeatures", "-d", "By default the presence samples are added to the background data, to ensure that the constraints are all feasible. this flag prevents them from being added, for example if you give background data in swd format that already contains the presence samples.."),
@@ -72,6 +75,7 @@ public class MaxentRun {
     RANDOMTESTPOINTS("randomtestpoints", "-X", "Set the random test percentage (default 0)."),
     RAW("raw", "-Q", "Use raw rather than logistic output format."),
     REMOVEDUPLICATES("removeduplicates", "-u", "Remove duplicates if multiple samples lie in the same grid cell."),
+    REPLICATES("replicates", "", "Used to do multiple runs for the same species."),
     RESPONSECURVES("responsecurves", "-P", "Turn on response curves."),
     RESPONSECURVESEXPONENT("responsecurvesexponent", "", "When making response curves, plot the exponent of the exponential maxent model rather than the logistic prediction.."),
     SAMPLESFILE("samplesfile", "-s", "Location of samples file."),
@@ -80,9 +84,7 @@ public class MaxentRun {
     TOGGLELAYERSELECTED("togglelayerselected", "-N", "Toggle selection of environmental layers whose names begin with=<prefix> (default: all selected)."),
     TOGGLELAYERTYPE("togglelayertype", "-t", "Toggle continuous/categorical for environmental layers whose names begin with=<prefix> (default: all continuous)."),
     TOGGLESPECIESSELECTED("togglespeciesselected", "-E", "Toggle selection of species whose names begin with=<prefix> (default: all selected)."),
-    WRITEPLOTDATA("writeplotdata", "", "Write the raw data for response curves to .dat files in the output directory."),
-    REPLICATES("replicates", "", "Used to do multiple runs for the same species."),
-    BACKGROUNDPOINTS("n", "n", "Number of background points.");
+    WRITEPLOTDATA("writeplotdata", "", "Write the raw data for response curves to .dat files in the output directory.");
 
     private final String flag, abbreviation, summary;
 
@@ -124,12 +126,15 @@ public class MaxentRun {
    * 
    */
   public static class RunConfig {
-    private Map<Option, String> commandLine;
-    private final RunType runType;
-    private List<Sample> samples;
-    private List<Layer> environmentLayers;
     private List<Layer> backgroundLayers;
+    private Map<Option, String> commandLine;
+    private List<Layer> environmentLayers;
     private List<Layer> projectionLayers;
+    private List<ProjectionSpec> projectionSpecs;
+    private Map<String, Layer> projLayerMap;
+    private final RunType runType;
+
+    private List<Sample> samples;
 
     /**
      * Constructs a run configuration from an actual run.
@@ -138,6 +143,8 @@ public class MaxentRun {
      */
     public RunConfig(MaxentRun run) {
       this(run.type);
+      projLayerMap = run.projLayerMap;
+      projectionSpecs = run.projectionSpecs;
       environmentLayers = run.layers;
       backgroundLayers = run.backgroundLayers;
       projectionLayers = run.projectionLayers;
@@ -217,7 +224,6 @@ public class MaxentRun {
     public MaxentRun build() {
       return new MaxentRun(this);
     }
-
     /**
      * Adds layers to the configuration.
      * 
@@ -230,6 +236,13 @@ public class MaxentRun {
     }
 
     /**
+     * @return the projLayerMap
+     */
+    public Map<String, Layer> getProjLayerMap() {
+      return projLayerMap;
+    }
+
+    /**
      * Adds a list of projection layers to this config.
      * 
      * @param layers projection layers
@@ -237,6 +250,15 @@ public class MaxentRun {
      */
     public RunConfig projectionLayers(List<Layer> layers) {
       projectionLayers = new ArrayList<Layer>(layers);
+      return this;
+    }
+
+    public RunConfig projectionSpecs(List<ProjectionSpec> projectionSpecs) {
+      this.projectionSpecs = new ArrayList<ProjectionSpec>(projectionSpecs);
+      return this;
+    }
+    public RunConfig projLayerMap(Map<String, Layer> projLayerMap) {
+      this.projLayerMap = new HashMap<String, Layer>(projLayerMap);
       return this;
     }
 
@@ -258,7 +280,7 @@ public class MaxentRun {
   }
 
   public static enum RunType {
-    MODEL, PROJECTION, SWD, BACKGROUND_SWD;
+    BACKGROUND_SWD, MODEL, PROJECTION, SWD;
   }
 
   private static String toString(Map<Option, String> options) {
@@ -271,12 +293,17 @@ public class MaxentRun {
     return sb.toString();
   }
 
-  private final Map<Option, String> commandLine;
-  private final RunType type;
-  private final ArrayList<Sample> samples;
-  private final ArrayList<Layer> layers;
+  public Map<String, Layer> projLayerMap;
+
   private final ArrayList<Layer> backgroundLayers;
+  private final Map<Option, String> commandLine;
+  private final ArrayList<Layer> layers;
   private final ArrayList<Layer> projectionLayers;
+
+  private final List<ProjectionSpec> projectionSpecs;
+  private final ArrayList<Sample> samples;
+
+  private final RunType type;
 
   private MaxentRun(RunConfig options) {
     type = options.runType;
@@ -290,6 +317,10 @@ public class MaxentRun {
         : new ArrayList<Layer>(options.backgroundLayers);
     projectionLayers = options.projectionLayers == null ? new ArrayList<Layer>()
         : new ArrayList<Layer>(options.projectionLayers);
+    projectionSpecs = options.projectionSpecs == null ? new ArrayList<ProjectionSpec>()
+        : new ArrayList<ProjectionSpec>(options.projectionSpecs);
+    projLayerMap = options.projLayerMap == null ? new HashMap<String, Layer>()
+        : new HashMap<String, Layer>(options.projLayerMap);
   }
 
   /**
@@ -350,6 +381,13 @@ public class MaxentRun {
    */
   public ArrayList<Layer> getProjectionLayers() {
     return projectionLayers;
+  }
+
+  /**
+   * @return the projectionSpecs
+   */
+  public List<ProjectionSpec> getProjectionSpecs() {
+    return projectionSpecs;
   }
 
   /**

@@ -32,6 +32,8 @@ import au.com.bytecode.opencsv.CSVWriter;
  */
 public class Sample implements Comparable<Sample> {
 
+  public static final int UNKNOWN_YEAR = 0;
+
   /**
    * Loads samples from a MaxEnt samples CSV and returns them in a list. The
    * expected CSV format is:
@@ -43,8 +45,7 @@ public class Sample implements Comparable<Sample> {
    * @return list of samples
    * @throws IOException problems reading path
    */
-  public static List<Sample> fromCsv(String path, int sampleYear)
-      throws IOException {
+  public static List<Sample> fromCsv(String path) throws IOException {
     CSVReader reader = new CSVReader(new FileReader(path));
     String[] line;
     List<Sample> samples = new ArrayList<Sample>();
@@ -53,10 +54,17 @@ public class Sample implements Comparable<Sample> {
     int SPECIES = 0;
     int LONG = 1;
     int LAT = 2;
+    int year;
+    String[] name;
     while ((line = reader.readNext()) != null) {
-      samples.add(Sample.newInstance(line[SPECIES], sampleYear, LatLng
-          .newInstance(Double.parseDouble(line[LAT]), Double
-              .parseDouble(line[LONG]))));
+      name = line[SPECIES].split("-");
+      try {
+        year = Integer.parseInt(name[1]);
+      } catch (Exception e) {
+        year = Sample.UNKNOWN_YEAR;
+      }
+      samples.add(Sample.newInstance(name[0], year, LatLng.newInstance(Double
+          .parseDouble(line[LAT]), Double.parseDouble(line[LONG]))));
     }
     return samples;
   }
@@ -82,18 +90,14 @@ public class Sample implements Comparable<Sample> {
     return new Sample(name, year, point);
   }
 
-  public static String toTempCsv(List<Sample> samples) throws IOException {
+  public static String toCsv(List<Sample> samples) throws IOException {
+    return toCsv(samples, false);
+  }
+
+  public static String toCsv(List<Sample> samples, boolean appendYear)
+      throws IOException {
     String path = File.createTempFile("samples", ".csv").getPath();
-    CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
-    String[] line = { "species", "dd long", "dd lat" };
-    writer.writeNext(line);
-    for (Sample s : samples) {
-      line = String.format("%s,%f,%f", s.getName(),
-          s.getPoint().getLongitude(), s.getPoint().getLatitude()).split(",");
-      writer.writeNext(line);
-    }
-    writer.close();
-    return path;
+    return writeCsv(path, samples, appendYear);
   }
 
   /**
@@ -107,24 +111,36 @@ public class Sample implements Comparable<Sample> {
    */
   public static void toCsv(String path, List<Sample> samples)
       throws IOException {
+    writeCsv(path, samples, false);
+  }
+
+  private static String writeCsv(String path, List<Sample> samples,
+      boolean appendYear) throws IOException {
     CSVWriter writer = new CSVWriter(new FileWriter(path), ',');
     String[] line = { "species", "dd long", "dd lat" };
     writer.writeNext(line);
     for (Sample s : samples) {
-      line = String.format("%s,%f,%f", s.getName(),
-          s.getPoint().getLongitude(), s.getPoint().getLatitude()).split(",");
+      if (appendYear) {
+        line = String.format("%s-%d,%f,%f", s.getName(), s.getYear(),
+            s.getPoint().getLongitude(), s.getPoint().getLatitude()).split(",");
+      } else {
+        line = String.format("%s,%f,%f", s.getName(),
+            s.getPoint().getLongitude(), s.getPoint().getLatitude()).split(",");
+
+      }
       writer.writeNext(line);
     }
     writer.close();
+    return path;
   }
 
   private volatile int hashCode;
 
   private final String name;
 
-  private final int year;
-
   private final LatLng point;
+
+  private final int year;
 
   private Sample(String name, int year, LatLng point) {
     this.name = name;
@@ -197,6 +213,6 @@ public class Sample implements Comparable<Sample> {
 
   @Override
   public String toString() {
-    return String.format("[name=%s year=%d point=%s]", name, year, point);
+    return String.format("[%s %d]", name, year);
   }
 }
